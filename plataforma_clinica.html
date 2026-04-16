@@ -1680,7 +1680,6 @@
             domicilioTrabajo: "Vilelas 2223 - Río Cuarto",
             especialidad: "Psicología",
             valorSesionParticular: 28000,
-            valorCoseguroGeneral: 14000,
             obrasSociales: OS_ESTANDAR,
           });
         }
@@ -2306,7 +2305,7 @@
         return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
       }
       function getWeekDates(base) {
-        const d = new Date(base);
+        const d = typeof base === 'string' ? new Date(base + 'T12:00:00') : new Date(base);
         const day = d.getDay();
         const diff = day === 0 ? -6 : 1 - day;
         const lun = new Date(d);
@@ -2319,8 +2318,13 @@
         }
         return days;
       }
+      /* Convierte Date a "YYYY-MM-DD" usando hora LOCAL (no UTC) para evitar
+         el desfase de zona horaria que produce toISOString() en UTC-3 Argentina */
       function dateStr(d) {
-        return d.toISOString().slice(0, 10);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
       }
       function getMondayStr(fechaStr) {
         if (!fechaStr) return null;
@@ -4473,7 +4477,7 @@
             titulo: "",
             fecha: defaultFecha || "",
             horaInicio: defaultHora || "10:00",
-            horaFin: calcFin(defaultHora || "10:00", 45),
+            horaFin: calcFin(defaultHora || "10:00", 60),
             estado: "pendiente",
             cobrado: false,
             notas: "",
@@ -4660,7 +4664,7 @@
                       value={f.horaInicio || ""}
                       onChange={(e) => {
                         upd("horaInicio", e.target.value);
-                        upd("horaFin", calcFin(e.target.value, 45));
+                        upd("horaFin", calcFin(e.target.value, 60));
                       }}
                     />
                   </div>
