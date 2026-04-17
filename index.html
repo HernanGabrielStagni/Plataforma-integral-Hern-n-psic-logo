@@ -2065,6 +2065,11 @@
         return false;
       }
 
+      function tieneNotasAlerta(s) {
+        const na = s.notasAlertas || {};
+        return !!(na.clinica || na.admin || na.asistencia);
+      }
+
       /* Genera items descriptivos del pendiente. Cada item: { texto, campo }
        campo = clave de la sesión que hay que setear a true para resolverlo */
       function descPendiente(s, pacNombre, hoy) {
@@ -2590,10 +2595,10 @@
                               </>
                             ) : (
                               <>
-                                {tienePendientePago(s, hoyStr) && (
+                                {(tienePendientePago(s, hoyStr) || tieneNotasAlerta(s)) && (
                                   <div
                                     className="ag-pago-alerta"
-                                    title="Cobro/orden pendiente"
+                                    title="Cobro/orden/notas pendiente"
                                   >
                                     !
                                   </div>
@@ -3053,6 +3058,7 @@
               evolucionClinica: "",
               notasAdmin: "",
               notasAsistencia: "",
+              notasAlertas: { clinica: false, admin: false, asistencia: false },
               colorLabel: "",
               ...pagoDesde(null),
             });
@@ -4008,8 +4014,11 @@
                     </div>
                   )}
 
-                {/* ── OBSERVACIONES (3 campos estructurados) ── */}
+                {/* ── NOTAS Y COMENTARIOS ── */}
                 <div style={{ marginTop: "2px" }}>
+                  <div style={{ fontFamily: "var(--serif2)", fontSize: "11px", color: "rgba(255,255,255,.45)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "8px" }}>
+                    💬 Notas y comentarios
+                  </div>
                   {/* Tabs */}
                   <div
                     style={{
@@ -4102,6 +4111,34 @@
                               }}
                             />
                           )}
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              upd("notasAlertas", {
+                                ...(f.notasAlertas || {}),
+                                [t.key]: !(f.notasAlertas?.[t.key]),
+                              });
+                            }}
+                            title={f.notasAlertas?.[t.key] ? "Quitar alerta" : "Marcar pendiente"}
+                            style={{
+                              width: "13px",
+                              height: "13px",
+                              borderRadius: "3px",
+                              border: `1.5px solid ${f.notasAlertas?.[t.key] ? "var(--do)" : "rgba(255,255,255,.3)"}`,
+                              background: f.notasAlertas?.[t.key] ? "var(--do)" : "transparent",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              fontSize: "9px",
+                              color: "var(--vd)",
+                              fontWeight: 900,
+                              marginLeft: "4px",
+                            }}
+                          >
+                            {f.notasAlertas?.[t.key] ? "✓" : ""}
+                          </div>
                         </button>
                       );
                     })}
@@ -4938,16 +4975,21 @@
           (s) => s.estado === "cancelo" && s.tipo !== "reserva_personal",
         ).length;
 
-        /* Novedades: sesiones con pendientes de cobro/orden esta semana */
+        /* Novedades: sesiones con pendientes de cobro/orden/notas esta semana */
         const novedadesItems = weekSes
-          .filter((s) => tienePendientePago(s, hoyStr))
+          .filter((s) => tienePendientePago(s, hoyStr) || tieneNotasAlerta(s))
           .map((s) => {
             const pac = pacientes.find((p) => p.id === s.pacienteId);
-            return descPendiente(
-              s,
-              pac ? `${pac.nombre} ${pac.apellido}` : "Paciente",
-              hoyStr,
-            );
+            const nombre = pac ? `${pac.nombre} ${pac.apellido}` : "Paciente";
+            const base = descPendiente(s, nombre, hoyStr);
+            const na = s.notasAlertas || {};
+            if (na.clinica)
+              base.items.push({ texto: "Notas pendientes en Clínica", campo: "notasAlertas_clinica" });
+            if (na.admin)
+              base.items.push({ texto: "Notas pendientes en Administ.", campo: "notasAlertas_admin" });
+            if (na.asistencia)
+              base.items.push({ texto: "Notas pendientes en Asistencia", campo: "notasAlertas_asistencia" });
+            return base;
           });
 
         /* ── label semana ── */
@@ -4974,7 +5016,15 @@
           const all = getData("hgsp_sesiones");
           const idx = all.findIndex((x) => x.id === sesionId);
           if (idx < 0) return;
-          all[idx] = { ...all[idx], [campo]: true };
+          if (campo.startsWith("notasAlertas_")) {
+            const subkey = campo.replace("notasAlertas_", "");
+            all[idx] = {
+              ...all[idx],
+              notasAlertas: { ...(all[idx].notasAlertas || {}), [subkey]: false },
+            };
+          } else {
+            all[idx] = { ...all[idx], [campo]: true };
+          }
           setData("hgsp_sesiones", all);
           loadData();
           showToast("✅ Ítem marcado como resuelto");
@@ -5135,6 +5185,7 @@
                     evolucionClinica: "",
                     notasAdmin: "",
                     notasAsistencia: "",
+                    notasAlertas: { clinica: false, admin: false, asistencia: false },
                     modalidadPago:
                       pac.cobertura === "particular"
                         ? "particular"
