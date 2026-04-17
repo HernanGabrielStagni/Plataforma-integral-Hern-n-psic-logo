@@ -4015,8 +4015,15 @@
                   )}
 
                 {/* ── NOTAS Y COMENTARIOS ── */}
-                <div style={{ marginTop: "2px" }}>
-                  <div style={{ fontFamily: "var(--serif2)", fontSize: "11px", color: "rgba(255,255,255,.45)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "8px" }}>
+                <div style={{
+                  marginTop: "2px",
+                  background: "rgba(200,146,42,0.07)",
+                  border: "1px solid rgba(200,146,42,0.3)",
+                  borderRadius: "12px",
+                  padding: "14px",
+                  marginBottom: "12px",
+                }}>
+                  <div style={{ fontFamily: "var(--serif)", color: "var(--do)", fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
                     💬 Notas y comentarios
                   </div>
                   {/* Tabs */}
@@ -4025,28 +4032,16 @@
                       display: "flex",
                       gap: "4px",
                       background: "rgba(0,0,0,.25)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(200,146,42,0.2)",
                       borderRadius: "50px",
                       padding: "3px",
-                      marginBottom: "12px",
+                      marginBottom: "6px",
                     }}
                   >
                     {[
-                      {
-                        key: "clinica",
-                        label: "🩺 Clínica",
-                        title: "Evolución Clínica",
-                      },
-                      {
-                        key: "admin",
-                        label: "📋 Admin",
-                        title: "Novedades Administrativas",
-                      },
-                      {
-                        key: "asistencia",
-                        label: "📆 Asistencia",
-                        title: "Control de Asistencia",
-                      },
+                      { key: "clinica",   label: "🩺 Clínica" },
+                      { key: "admin",     label: "📋 Admin" },
+                      { key: "asistencia",label: "📆 Asistencia" },
                     ].map((t) => {
                       const activo = notasTab === t.key;
                       const tieneContenido = !!(t.key === "clinica"
@@ -4054,6 +4049,7 @@
                         : t.key === "admin"
                           ? f.notasAdmin
                           : f.notasAsistencia);
+                      const alertaActiva = !!(f.notasAlertas?.[t.key]);
                       return (
                         <button
                           key={t.key}
@@ -4062,13 +4058,15 @@
                             flex: 1,
                             padding: "8px 10px",
                             borderRadius: "50px",
-                            border: "none",
+                            border: activo
+                              ? "2px solid var(--do)"
+                              : "2px solid rgba(200,146,42,.35)",
                             cursor: "pointer",
                             fontFamily: "var(--sans)",
                             fontSize: "13px",
                             fontWeight: activo ? 800 : 600,
                             background: activo ? "var(--vm)" : "transparent",
-                            color: activo ? "#fff" : "rgba(255,255,255,0.5)",
+                            color: activo ? "#fff" : "rgba(255,255,255,0.6)",
                             transition: "all .25s ease",
                             position: "relative",
                             textShadow: activo
@@ -4077,55 +4075,51 @@
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            gap: "6px",
+                            gap: "5px",
                             boxShadow: activo
                               ? "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.15)"
                               : "none",
                           }}
                         >
-                          <span
-                            style={{
-                              fontSize: "17px",
-                              filter: activo
-                                ? "drop-shadow(0 0 10px rgba(255,255,255,0.5))"
-                                : "none",
-                            }}
-                          >
+                          <span style={{
+                            fontSize: "15px",
+                            filter: activo ? "drop-shadow(0 0 10px rgba(255,255,255,0.5))" : "none",
+                          }}>
                             {t.label.split(" ")[0]}
                           </span>
                           <span style={{ color: activo ? "#fff" : "inherit" }}>
                             {t.label.split(" ")[1]}
                           </span>
                           {tieneContenido && !activo && (
-                            <span
-                              style={{
-                                position: "absolute",
-                                top: "5px",
-                                right: "10px",
-                                width: "7px",
-                                height: "7px",
-                                borderRadius: "50%",
-                                background: "var(--do)",
-                                display: "inline-block",
-                                boxShadow: "0 0 6px var(--do)",
-                              }}
-                            />
+                            <span style={{
+                              position: "absolute",
+                              top: "4px",
+                              right: "28px",
+                              width: "6px",
+                              height: "6px",
+                              borderRadius: "50%",
+                              background: "var(--do)",
+                              display: "inline-block",
+                              boxShadow: "0 0 6px var(--do)",
+                            }} />
                           )}
+                          {/* Checkbox alerta */}
+                          <span style={{ fontSize: "10px", color: alertaActiva ? "var(--do)" : "rgba(255,255,255,.35)", lineHeight: 1 }}>⚠</span>
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
                               upd("notasAlertas", {
                                 ...(f.notasAlertas || {}),
-                                [t.key]: !(f.notasAlertas?.[t.key]),
+                                [t.key]: !alertaActiva,
                               });
                             }}
-                            title={f.notasAlertas?.[t.key] ? "Quitar alerta" : "Marcar pendiente"}
+                            title={alertaActiva ? "Quitar alerta" : "Marcar como alerta"}
                             style={{
-                              width: "13px",
-                              height: "13px",
+                              width: "14px",
+                              height: "14px",
                               borderRadius: "3px",
-                              border: `1.5px solid ${f.notasAlertas?.[t.key] ? "var(--do)" : "rgba(255,255,255,.3)"}`,
-                              background: f.notasAlertas?.[t.key] ? "var(--do)" : "transparent",
+                              border: `2px solid ${alertaActiva ? "var(--do)" : "rgba(200,146,42,.4)"}`,
+                              background: alertaActiva ? "var(--do)" : "transparent",
                               cursor: "pointer",
                               display: "flex",
                               alignItems: "center",
@@ -4134,21 +4128,30 @@
                               fontSize: "9px",
                               color: "var(--vd)",
                               fontWeight: 900,
-                              marginLeft: "4px",
                             }}
                           >
-                            {f.notasAlertas?.[t.key] ? "✓" : ""}
+                            {alertaActiva ? "✓" : ""}
                           </div>
                         </button>
                       );
                     })}
+                  </div>
+                  {/* Leyenda checkboxes */}
+                  <div style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: "10px",
+                    color: "rgba(200,146,42,.55)",
+                    marginBottom: "10px",
+                    letterSpacing: ".04em",
+                  }}>
+                    ⚠ Genera una alerta en "Novedades de la semana"
                   </div>
 
                   {/* Panel clínica */}
                   {notasTab === "clinica" && (
                     <textarea
                       className="modal-textarea"
-                      style={{ minHeight: "85px" }}
+                      style={{ minHeight: "85px", border: "2px solid var(--do)" }}
                       value={f.evolucionClinica || ""}
                       onChange={(e) => upd("evolucionClinica", e.target.value)}
                       placeholder="EVOLUCIÓN CLÍNICA: Desarrollo de la sesión, temas abordados, recursos utilizados, insights del paciente…"
@@ -4159,7 +4162,7 @@
                   {notasTab === "admin" && (
                     <textarea
                       className="modal-textarea"
-                      style={{ minHeight: "85px" }}
+                      style={{ minHeight: "85px", border: "2px solid var(--do)" }}
                       value={f.notasAdmin || ""}
                       onChange={(e) => upd("notasAdmin", e.target.value)}
                       placeholder="NOVEDADES ADMIN: Acuerdos de pago, autorizaciones de obra social, pagos parciales, observaciones de facturación…"
@@ -4170,7 +4173,7 @@
                   {notasTab === "asistencia" && (
                     <textarea
                       className="modal-textarea"
-                      style={{ minHeight: "85px" }}
+                      style={{ minHeight: "85px", border: "2px solid var(--do)" }}
                       value={f.notasAsistencia || ""}
                       onChange={(e) => upd("notasAsistencia", e.target.value)}
                       placeholder="CONTROL ASISTENCIA: Motivo documentado de cancelación, reprogramación, llegada tardía, justificación de ausencia…"
