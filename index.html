@@ -472,20 +472,25 @@
         width: 90%;
         max-width: 520px;
         max-height: 85vh;
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: hidden;
         position: relative;
+        display: flex;
+        flex-direction: column;
       }
       .modal-bar {
         height: 4px;
         background: linear-gradient(90deg, var(--do), #e8b84b);
         border-radius: var(--r) var(--r) 0 0;
+        flex-shrink: 0;
       }
       .modal-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 18px 22px 0;
+        padding: 18px 22px 14px;
+        flex-shrink: 0;
+        background: var(--vd);
+        border-bottom: 1px solid rgba(200,146,42,.15);
       }
       .modal-title {
         font-family: var(--serif);
@@ -510,7 +515,74 @@
       }
       .modal-body {
         padding: 18px 22px 22px;
+        overflow-y: auto;
+        flex: 1;
       }
+      .modal-icon-btn {
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.15);
+        color: rgba(255,255,255,.7);
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 15px; transition: all .2s;
+        flex-shrink: 0;
+      }
+      .modal-icon-btn:hover { background: rgba(255,255,255,.15); color: white; }
+      .modal-icon-btn.danger:hover { background: rgba(249,115,22,.2); color: #FCA87A; border-color: rgba(249,115,22,.4); }
+      .modal-confirm-cancel {
+        display: flex; flex-direction: column; gap: 10px;
+        padding: 14px 22px;
+        background: var(--vd);
+        border-bottom: 1px solid rgba(200,146,42,.15);
+        flex-shrink: 0;
+      }
+      .modal-confirm-cancel-text {
+        color: rgba(255,255,255,.85); font-size: 13px; font-family: var(--sans);
+      }
+      .modal-confirm-cancel-btns { display: flex; gap: 8px; }
+      /* ── MODAL TURNO: cabecera compacta ── */
+      .mt-pac-nombre {
+        font-family: var(--serif); color: var(--do);
+        font-size: 17px; font-weight: 700; line-height: 1.2;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .mt-datetime {
+        font-family: var(--mono); font-size: 11px;
+        color: rgba(255,255,255,.5); margin-top: 2px;
+      }
+      .mt-always-row {
+        display: grid; grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px; padding: 0 0 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,.07);
+        margin-bottom: 2px;
+      }
+      .mt-always-row .modal-input { padding: 7px 10px; margin-bottom: 0; }
+      /* ── ACORDEÓN ── */
+      .acc-row { border-bottom: 1px solid rgba(255,255,255,.07); }
+      .acc-row:last-of-type { border-bottom: none; }
+      .acc-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 4px; cursor: pointer; user-select: none;
+        border-radius: 8px; transition: background .15s;
+      }
+      .acc-head:hover { background: rgba(255,255,255,.04); }
+      .acc-label-col { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+      .acc-label {
+        font-family: var(--mono); font-size: 10px;
+        text-transform: uppercase; color: rgba(255,255,255,.38);
+        letter-spacing: .07em;
+      }
+      .acc-value {
+        font-family: var(--sans); font-size: 13px;
+        color: rgba(255,255,255,.82); white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis;
+      }
+      .acc-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; margin-left: 8px; }
+      .acc-check-done { color: #7DCC90; font-size: 14px; font-weight: 700; }
+      .acc-check-pend { color: rgba(255,255,255,.18); font-size: 14px; }
+      .acc-arrow { color: rgba(255,255,255,.3); font-size: 10px; }
+      .acc-body { padding: 2px 0 14px 0; }
       .modal-label {
         font-family: var(--serif2);
         font-size: 10px;
@@ -1388,22 +1460,23 @@
       /* Badge de alerta de pago pendiente en bloque de sesión */
       .ag-pago-alerta {
         position: absolute;
-        top: 2px;
-        right: 3px;
-        width: 13px;
-        height: 13px;
+        top: 1px;
+        right: 2px;
+        width: 17px;
+        height: 17px;
         border-radius: 50%;
-        background: var(--do);
-        color: var(--vd);
-        font-size: 9px;
-        font-weight: 800;
-        font-family: var(--sans);
+        background: #D97706;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 900;
+        font-family: var(--serif);
         display: flex;
         align-items: center;
         justify-content: center;
         line-height: 1;
-        box-shadow: 0 0 0 2px rgba(200, 146, 42, 0.4);
+        box-shadow: 0 0 0 2px rgba(217,119,6,0.45), 0 2px 6px rgba(0,0,0,.4);
         z-index: 2;
+        letter-spacing: -.5px;
       }
       /* Panel de novedades de la semana */
       .novedades-panel {
@@ -1756,23 +1829,43 @@
       /* ═══════════════════════════════════════ */
       /* COMPONENTE: Modal                      */
       /* ═══════════════════════════════════════ */
-      function Modal({ isOpen, onClose, title, children }) {
+      function Modal({ isOpen, onClose, title, children, onSave, onDelete }) {
+        const [confirmClose, setConfirmClose] = React.useState(false);
         if (!isOpen) return null;
 
+        function tryClose() { if (onSave) setConfirmClose(true); else onClose(); }
+        function doClose() { setConfirmClose(false); onClose(); }
+
         function handleOverlayClick(e) {
-          if (e.target === e.currentTarget) onClose();
+          if (e.target === e.currentTarget) tryClose();
         }
 
         return ReactDOM.createPortal(
           <div className="modal-overlay" onClick={handleOverlayClick}>
             <div className="modal-card">
               <div className="modal-bar"></div>
-              <div className="modal-header">
-                <span className="modal-title">{title}</span>
-                <button className="modal-close" onClick={onClose}>
-                  ✕
-                </button>
-              </div>
+              {confirmClose ? (
+                <div className="modal-confirm-cancel">
+                  <span className="modal-confirm-cancel-text">¿Salir sin guardar los cambios?</span>
+                  <div className="modal-confirm-cancel-btns">
+                    <button className="btn btn-danger" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={doClose}>Sí, salir</button>
+                    <button className="btn btn-sec" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={() => setConfirmClose(false)}>No, quedarme</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="modal-header">
+                  <span className="modal-title">{title}</span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    {onDelete && (
+                      <button className="modal-icon-btn danger" onClick={onDelete} title="Eliminar">🗑️</button>
+                    )}
+                    {onSave && (
+                      <button className="modal-icon-btn" onClick={onSave} title="Guardar">💾</button>
+                    )}
+                    <button className="modal-icon-btn" onClick={tryClose} title="Cerrar">✕</button>
+                  </div>
+                </div>
+              )}
               <div className="modal-body">{children}</div>
             </div>
           </div>,
@@ -2068,6 +2161,14 @@
       function tieneNotasAlerta(s) {
         const na = s.notasAlertas || {};
         return !!(na.clinica || na.admin || na.asistencia);
+      }
+
+      /* Turno que ya pasó en hora pero sigue en estado "pendiente" (sin calificar) */
+      function esTurnoPasadoSinCalificar(s) {
+        if (!s || s.tipo === "reserva_personal" || s.tipo === "AT") return false;
+        if (s.estado !== "pendiente") return false;
+        if (!s.fecha || !s.horaFin) return false;
+        return new Date(`${s.fecha}T${s.horaFin}`) < new Date();
       }
 
       /* Genera items descriptivos del pendiente. Cada item: { texto, campo }
@@ -2595,10 +2696,10 @@
                               </>
                             ) : (
                               <>
-                                {(tienePendientePago(s, hoyStr) || tieneNotasAlerta(s)) && (
+                                {(tienePendientePago(s, hoyStr) || tieneNotasAlerta(s) || esTurnoPasadoSinCalificar(s)) && (
                                   <div
                                     className="ag-pago-alerta"
-                                    title="Cobro/orden/notas pendiente"
+                                    title="Turno requiere atención"
                                   >
                                     !
                                   </div>
@@ -2999,7 +3100,11 @@
         const [conflictos, setConflictos] = useState([]);
         const [showConflictos, setShowConflictos] = useState(false);
         const [notasTab, setNotasTab] = useState("clinica");
+        const [confirmCancel, setConfirmCancel] = useState(false);
         const overlayMDRef = useRef(false);
+
+        function tryClose() { setConfirmCancel(true); }
+        function doClose() { setConfirmCancel(false); onClose(); }
 
         /* Campos nuevos de pago viven en f. Este helper los extrae con defaults */
         function pagoF(sesData) {
@@ -3246,6 +3351,78 @@
           { v: "grupo", l: "👨‍👩‍👧 Grupo" },
         ];
 
+        /* ── Acordeón: sección abierta ── */
+        const [openSection, setOpenSection] = useState(null);
+        function toggleSec(k) {
+          setOpenSection((prev) => (prev === k ? null : k));
+        }
+
+        /* ── Checklist: valores de completitud ── */
+        const estadoCompleto = !!(f.estado && f.estado !== "pendiente");
+
+        const cobroCmpleto = (() => {
+          if (f.tipo === "AT") return true;
+          if (f.estado === "cancelo" || f.estado === "reprogramo") {
+            if (!f.cobroCancel) return true;
+            return !!(f.cancelAbonado || f.cancelOrdenSaldada);
+          }
+          if (f.modalidadPago === "obra_social")
+            return !!(f.coseguroAbonado && f.ordenEmitida && f.ordenFirmada);
+          if (f.modalidadPago === "particular") return !!f.particularAbonado;
+          return false;
+        })();
+
+        const calificCmpleto = (() => {
+          if (!tieneObjetivos) return true;
+          if (objSemana?.obj1 && !f.obj1Estado) return false;
+          if (objSemana?.obj2 && !f.obj2Estado) return false;
+          return true;
+        })();
+
+        /* ── Valores resumen para acordeón cerrado ── */
+        const tipoInfo = TIPOS.find((t) => t.v === f.tipo) || TIPOS[0];
+
+        const cobroResumen = (() => {
+          if (f.tipo === "AT") return "AT — sin cobro directo";
+          if (f.estado === "cancelo" || f.estado === "reprogramo") {
+            if (!f.cobroCancel) return "Sin cobro por cancelación";
+            return f.cancelAbonado || f.cancelOrdenSaldada ? "Abonado ✓" : "Pendiente de cobro";
+          }
+          if (f.modalidadPago === "obra_social") {
+            const p = [];
+            if (f.coseguroAbonado) p.push("Coseguro ✓");
+            if (f.ordenEmitida) p.push("Orden ✓");
+            if (f.ordenFirmada) p.push("Firma ✓");
+            return "OS" + (p.length ? " · " + p.join(" · ") : "");
+          }
+          const monto = f.montoParticular ? " · $" + Number(f.montoParticular).toLocaleString("es-AR") : "";
+          return "Particular" + monto + (f.particularAbonado ? " ✓" : "");
+        })();
+
+        const calificResumen = (() => {
+          if (!tieneObjetivos) return "Sin objetivos esta semana";
+          const items = [
+            objSemana?.obj1 ? f.obj1Estado : null,
+            objSemana?.obj2 ? f.obj2Estado : null,
+          ].filter((_, i) => (i === 0 ? objSemana?.obj1 : objSemana?.obj2));
+          const sin = items.filter((e) => !e).length;
+          const buenos = items.filter((e) => e === "bueno").length;
+          const malos = items.filter((e) => e === "malo").length;
+          const parts = [];
+          if (buenos) parts.push(buenos + " 😊");
+          if (malos) parts.push(malos + " 😞");
+          if (sin) parts.push(sin + " sin calificar");
+          return parts.join(" · ") || "Sin calificar";
+        })();
+
+        const notasResumen = (() => {
+          const tieneAlerta = f.notasAlertas?.clinica || f.notasAlertas?.admin || f.notasAlertas?.asistencia;
+          if (tieneAlerta) return "⚠ Con alertas pendientes";
+          const txt = f.evolucionClinica || f.notasAdmin || f.notasAsistencia || "";
+          if (!txt) return "Opcional — sin notas";
+          return txt.length > 40 ? txt.slice(0, 40) + "…" : txt;
+        })();
+
         return ReactDOM.createPortal(
           <div
             className="modal-overlay"
@@ -3254,777 +3431,349 @@
             }}
             onClick={(e) => {
               if (e.target === e.currentTarget && overlayMDRef.current)
-                onClose();
+                tryClose();
               overlayMDRef.current = false;
             }}
           >
             <div className="modal-card" style={{ maxWidth: "520px" }}>
               <div className="modal-bar" />
-              <div className="modal-header">
-                <span className="modal-title">
-                  {isEditar ? "Editar turno" : "Nuevo turno"}
-                </span>
-                <button className="modal-close" onClick={onClose}>
-                  ✕
-                </button>
-              </div>
-              <div className="modal-body">
-                {/* COLOR DE ETIQUETA */}
-                <div style={{ marginBottom: "14px" }}>
-                  <div
-                    style={{
-                      fontFamily: "var(--mono)",
-                      fontSize: "10px",
-                      color: "rgba(255,255,255,.4)",
-                      textTransform: "uppercase",
-                      letterSpacing: ".07em",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    Color etiqueta
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "6px",
-                    }}
-                  >
-                    <button
-                      onClick={() => upd("colorLabel", "")}
-                      title="Color por defecto según tipo"
-                      style={{
-                        width: "20px",
-                        height: "20px",
-                        borderRadius: "50%",
-                        border: `2px solid ${!f.colorLabel ? "var(--do)" : "rgba(255,255,255,.18)"}`,
-                        background: "rgba(255,255,255,.08)",
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "10px",
-                        color: "rgba(255,255,255,.45)",
-                        lineHeight: 1,
-                        boxShadow: !f.colorLabel
-                          ? "0 0 0 2px rgba(200,146,42,.5)"
-                          : "none",
-                        transition: "all .15s",
-                      }}
-                    >
-                      ↺
-                    </button>
-                    {PALETA_COLORES.map((c) => {
-                      const sel = f.colorLabel === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          onClick={() => upd("colorLabel", c.id)}
-                          title={c.id}
-                          style={{
-                            width: "20px",
-                            height: "20px",
-                            borderRadius: "50%",
-                            background: c.bg,
-                            border: `2px solid ${sel ? "#fff" : "rgba(255,255,255,.12)"}`,
-                            boxShadow: sel ? `0 0 0 2px ${c.border}` : "none",
-                            cursor: "pointer",
-                            flexShrink: 0,
-                            transition: "all .15s",
-                            transform: sel ? "scale(1.25)" : "scale(1)",
-                          }}
-                        />
-                      );
-                    })}
+              {confirmCancel ? (
+                <div className="modal-confirm-cancel">
+                  <span className="modal-confirm-cancel-text">¿Salir sin guardar los cambios?</span>
+                  <div className="modal-confirm-cancel-btns">
+                    <button className="btn btn-danger" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={doClose}>Sí, salir</button>
+                    <button className="btn btn-sec" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={() => setConfirmCancel(false)}>No, quedarme</button>
                   </div>
                 </div>
-
-                {/* PACIENTE */}
-                <div style={{ marginBottom: "14px" }}>
-                  <div className="modal-label">Paciente</div>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      className="modal-input"
-                      style={{ marginBottom: 0 }}
-                      placeholder={isEditar ? "" : "Buscar por nombre o DNI..."}
-                      value={busq}
-                      readOnly={isEditar}
-                      onChange={(e) => handleBusq(e.target.value)}
-                      onFocus={() => busq.length >= 2 && setShowSugs(true)}
-                      onBlur={() => setTimeout(() => setShowSugs(false), 180)}
-                    />
-                    {showSugs && (
-                      <div className="pac-sugs">
-                        {sugs.map((p) => (
-                          <div
-                            key={p.id}
-                            className="pac-sug-item"
-                            onMouseDown={() => selectPac(p)}
-                          >
-                            <span className="pac-sug-nombre">
-                              {p.nombre} {p.apellido}
-                            </span>
-                            <span className="pac-sug-dni">DNI {p.dni}</span>
-                          </div>
-                        ))}
-                      </div>
+              ) : (
+                <div className="modal-header" style={{ alignItems: isEditar && busq ? "flex-start" : "center" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {isEditar && busq ? (
+                      <>
+                        <div className="mt-pac-nombre">{busq}</div>
+                        <div className="mt-datetime">
+                          {f.fecha ? f.fecha.split("-").reverse().join("/") : ""}
+                          {f.horaInicio ? " · " + f.horaInicio : ""}
+                          {f.horaFin ? " – " + f.horaFin : ""}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="modal-title">{isEditar ? "Editar turno" : "Nuevo turno"}</span>
                     )}
                   </div>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", flexShrink: 0, marginLeft: "10px", marginTop: isEditar && busq ? "2px" : "0" }}>
+                    {isEditar && (
+                      <button className="modal-icon-btn danger" onClick={() => onDelete(f)} title="Eliminar">🗑️</button>
+                    )}
+                    <button className="modal-icon-btn" onClick={handleSave} title="Guardar">💾</button>
+                    <button className="modal-icon-btn" onClick={tryClose} title="Cerrar">✕</button>
+                  </div>
                 </div>
+              )}
+              <div className="modal-body">
+                {/* ─── CREATE: búsqueda de paciente ─── */}
+                {!isEditar && (
+                  <div style={{ marginBottom: "12px" }}>
+                    <div className="modal-label">Paciente</div>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        className="modal-input"
+                        style={{ marginBottom: 0 }}
+                        placeholder="Buscar por nombre o DNI..."
+                        value={busq}
+                        onChange={(e) => handleBusq(e.target.value)}
+                        onFocus={() => busq.length >= 2 && setShowSugs(true)}
+                        onBlur={() => setTimeout(() => setShowSugs(false), 180)}
+                      />
+                      {showSugs && (
+                        <div className="pac-sugs">
+                          {sugs.map((p) => (
+                            <div key={p.id} className="pac-sug-item" onMouseDown={() => selectPac(p)}>
+                              <span className="pac-sug-nombre">{p.nombre} {p.apellido}</span>
+                              <span className="pac-sug-dni">DNI {p.dni}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                <div
-                  style={{
-                    borderTop: "1px solid rgba(255,255,255,0.06)",
-                    marginBottom: "14px",
-                  }}
-                ></div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: "10px",
-                    marginBottom: "14px",
-                  }}
-                >
+                {/* ─── FECHA + HORARIO (siempre visible) ─── */}
+                <div className="mt-always-row">
                   <div>
                     <div className="modal-label">Fecha</div>
-                    <input
-                      className="modal-input"
-                      type="date"
-                      style={{ fontFamily: "var(--mono)" }}
-                      value={f.fecha || ""}
+                    <input className="modal-input" type="date" style={{ fontFamily:"var(--mono)" }} value={f.fecha || ""}
                       onChange={(e) => {
                         const nuevaFecha = e.target.value;
                         const slot = slotPacienteEnFecha(pacSel, nuevaFecha);
-                        setF((prev) => ({
-                          ...prev,
-                          fecha: nuevaFecha,
-                          ...(slot
-                            ? {
-                                horaInicio: slot.horaInicio,
-                                horaFin: slot.horaFin,
-                              }
-                            : {}),
-                        }));
+                        setF((prev) => ({ ...prev, fecha: nuevaFecha, ...(slot ? { horaInicio: slot.horaInicio, horaFin: slot.horaFin } : {}) }));
                       }}
                     />
                   </div>
                   <div>
-                    <div className="modal-label">Hora inicio</div>
-                    <input
-                      className="modal-input"
-                      type="time"
-                      style={{ fontFamily: "var(--mono)" }}
-                      value={f.horaInicio || ""}
-                      onChange={(e) => {
-                        upd("horaInicio", e.target.value);
-                        upd("horaFin", calcFin(e.target.value, 45));
-                      }}
+                    <div className="modal-label">Inicio</div>
+                    <input className="modal-input" type="time" style={{ fontFamily:"var(--mono)" }} value={f.horaInicio || ""}
+                      onChange={(e) => { upd("horaInicio", e.target.value); upd("horaFin", calcFin(e.target.value, 45)); }}
                     />
                   </div>
                   <div>
-                    <div className="modal-label">Hora fin</div>
-                    <input
-                      className="modal-input"
-                      type="time"
-                      style={{ fontFamily: "var(--mono)" }}
-                      value={f.horaFin || ""}
+                    <div className="modal-label">Fin</div>
+                    <input className="modal-input" type="time" style={{ fontFamily:"var(--mono)" }} value={f.horaFin || ""}
                       onChange={(e) => upd("horaFin", e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    borderTop: "1px solid rgba(255,255,255,0.06)",
-                    marginBottom: "14px",
-                  }}
-                ></div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "6px",
-                    flexWrap: "wrap",
-                    marginBottom: "14px",
-                  }}
-                >
-                  <div
-                    className="modal-label"
-                    style={{ width: "100%", marginBottom: "4px" }}
-                  >
-                    Tipo de sesión
+                {/* ─── 1. TIPO DE SESIÓN ─── */}
+                <div className="acc-row">
+                  <div className="acc-head" onClick={() => toggleSec("tipo")}>
+                    <div className="acc-label-col">
+                      <span className="acc-label">Tipo de sesión</span>
+                      <span className="acc-value">
+                        {tipoInfo.l}
+                        {f.colorLabel && (() => { const c = PALETA_COLORES.find((p) => p.id === f.colorLabel); return c ? <span style={{ display:"inline-block", width:"8px", height:"8px", borderRadius:"50%", background:c.bg, marginLeft:"6px", verticalAlign:"middle" }} /> : null; })()}
+                      </span>
+                    </div>
+                    <div className="acc-right">
+                      <span className="acc-check-done">✓</span>
+                      <span className="acc-arrow">{openSection === "tipo" ? "▴" : "▾"}</span>
+                    </div>
                   </div>
-                  {TIPOS.map((opt) => (
-                    <button
-                      key={opt.v}
-                      className={`btn ${f.tipo === opt.v ? "btn-g" : "btn-sec"}`}
-                      style={{ fontSize: "12px", padding: "6px 12px" }}
-                      onClick={() => upd("tipo", opt.v)}
-                    >
-                      {opt.l}
-                    </button>
-                  ))}
+                  {openSection === "tipo" && (
+                    <div className="acc-body">
+                      <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"12px" }}>
+                        {TIPOS.map((opt) => (
+                          <button key={opt.v} className={`btn ${f.tipo === opt.v ? "btn-g" : "btn-sec"}`} style={{ fontSize:"12px", padding:"6px 12px" }} onClick={() => upd("tipo", opt.v)}>{opt.l}</button>
+                        ))}
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:"5px" }}>
+                        <span style={{ fontFamily:"var(--mono)", fontSize:"10px", color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".06em", marginRight:"2px" }}>Color</span>
+                        <button onClick={() => upd("colorLabel", "")} title="Por defecto" style={{ width:"16px", height:"16px", borderRadius:"50%", border:`2px solid ${!f.colorLabel ? "var(--do)" : "rgba(255,255,255,.18)"}`, background:"rgba(255,255,255,.08)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"9px", color:"rgba(255,255,255,.45)", boxShadow:!f.colorLabel ? "0 0 0 2px rgba(200,146,42,.5)" : "none", flexShrink:0 }}>↺</button>
+                        {PALETA_COLORES.map((c) => { const sel = f.colorLabel === c.id; return <button key={c.id} onClick={() => upd("colorLabel", c.id)} title={c.id} style={{ width:"16px", height:"16px", borderRadius:"50%", background:c.bg, border:`2px solid ${sel ? "#fff" : "rgba(255,255,255,.12)"}`, boxShadow:sel ? `0 0 0 2px ${c.border}` : "none", cursor:"pointer", flexShrink:0, transition:"all .15s", transform:sel ? "scale(1.25)" : "scale(1)" }} />; })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
+                {/* ─── 2. ESTADO ─── */}
                 {isEditar && (
-                  <div
-                    style={{
-                      borderTop: "1px solid rgba(255,255,255,0.06)",
-                      marginBottom: "14px",
-                    }}
-                  ></div>
-                )}
-
-                {/* ESTADO (solo editar) */}
-                {isEditar && (
-                  <>
-                    <div className="modal-label">Estado</div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "6px",
-                        flexWrap: "wrap",
-                        marginBottom: "14px",
-                      }}
-                    >
-                      {ESTADOS.map((opt) => (
-                        <button
-                          key={opt.v}
-                          className={`btn ${f.estado === opt.v ? "btn-g" : "btn-sec"}`}
-                          style={{ fontSize: "12px", padding: "6px 12px" }}
-                          onClick={() => handleEstado(opt.v)}
-                        >
-                          {opt.l}
-                        </button>
-                      ))}
+                  <div className="acc-row">
+                    <div className="acc-head" onClick={() => toggleSec("estado")}>
+                      <div className="acc-label-col">
+                        <span className="acc-label">Estado</span>
+                        <span className="acc-value">{ESTADOS.find((e) => e.v === f.estado)?.l || "⏳ Pendiente"}</span>
+                      </div>
+                      <div className="acc-right">
+                        <span className={estadoCompleto ? "acc-check-done" : "acc-check-pend"}>{estadoCompleto ? "✓" : "○"}</span>
+                        <span className="acc-arrow">{openSection === "estado" ? "▴" : "▾"}</span>
+                      </div>
                     </div>
-                  </>
+                    {openSection === "estado" && (
+                      <div className="acc-body">
+                        <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                          {ESTADOS.map((opt) => (
+                            <button key={opt.v} className={`btn ${f.estado === opt.v ? "btn-g" : "btn-sec"}`} style={{ fontSize:"12px", padding:"6px 12px" }} onClick={() => { handleEstado(opt.v); setOpenSection(null); }}>{opt.l}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
-                {/* ── COBRO POR CANCELACIÓN / REPROGRAMACIÓN ── */}
-                {isEditar &&
-                  f.tipo !== "AT" &&
-                  (f.estado === "cancelo" || f.estado === "reprogramo") && (
-                    <div
-                      className="cobro-panel"
-                      style={{
-                        marginBottom: "10px",
-                        borderLeft: "5px solid rgba(200,146,42,.5)",
-                      }}
-                    >
-                      <div className="cobro-panel-title">
-                        {f.estado === "cancelo"
-                          ? "❌ Cobro por cancelación"
-                          : "🔄 Cobro por reprogramación"}
+                {/* ─── 3. FORMA DE COBRO ─── */}
+                {f.tipo !== "AT" && (
+                  <div className="acc-row">
+                    <div className="acc-head" onClick={() => toggleSec("cobro")}>
+                      <div className="acc-label-col">
+                        <span className="acc-label">Forma de cobro</span>
+                        <span className="acc-value">{cobroResumen}</span>
                       </div>
-
-                      {/* Toggle: ¿se registra cobro? */}
-                      <div
-                        className={`cobro-chk-row ${f.cobroCancel ? "chk-activo" : ""}`}
-                        style={{ marginBottom: f.cobroCancel ? "10px" : 0 }}
-                        onClick={() => upd("cobroCancel", !f.cobroCancel)}
-                      >
-                        <div
-                          className={`cobro-chk-box ${f.cobroCancel ? "on" : ""}`}
-                        >
-                          {f.cobroCancel ? "✓" : ""}
-                        </div>
-                        <span
-                          className={`cobro-chk-label ${f.cobroCancel ? "on" : ""}`}
-                        >
-                          {f.cobroCancel
-                            ? "Se cobra esta sesión"
-                            : "Registrar cobro por esta cancelación"}
-                        </span>
+                      <div className="acc-right">
+                        <span className={cobroCmpleto ? "acc-check-done" : "acc-check-pend"}>{cobroCmpleto ? "✓" : "○"}</span>
+                        <span className="acc-arrow">{openSection === "cobro" ? "▴" : "▾"}</span>
                       </div>
-
-                      {f.cobroCancel && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                          }}
-                        >
-                          {/* ── BLOQUE EFECTIVO / TRANSFERENCIA ── */}
-                          <div
-                            style={{
-                              background: "rgba(255,255,255,.04)",
-                              border: `1px solid ${f.cancelEfectivo ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
-                              borderRadius: "12px",
-                              padding: "10px 12px",
-                            }}
-                          >
-                            <div
-                              className={`cobro-chk-row ${f.cancelEfectivo ? "chk-activo" : ""}`}
-                              style={{
-                                marginBottom: f.cancelEfectivo ? "10px" : 0,
-                              }}
-                              onClick={() =>
-                                upd("cancelEfectivo", !f.cancelEfectivo)
-                              }
-                            >
-                              <div
-                                className={`cobro-chk-box ${f.cancelEfectivo ? "on" : ""}`}
-                              >
-                                {f.cancelEfectivo ? "✓" : ""}
-                              </div>
-                              <span
-                                className={`cobro-chk-label ${f.cancelEfectivo ? "on" : ""}`}
-                              >
-                                💵 Cobro en efectivo / transferencia
-                              </span>
+                    </div>
+                    {openSection === "cobro" && (
+                      <div className="acc-body">
+                        {isEditar && (f.estado === "cancelo" || f.estado === "reprogramo") ? (
+                          <div className="cobro-panel" style={{ borderLeft:"5px solid rgba(200,146,42,.5)" }}>
+                            <div className="cobro-panel-title">{f.estado === "cancelo" ? "❌ Cobro por cancelación" : "🔄 Cobro por reprogramación"}</div>
+                            <div className={`cobro-chk-row ${f.cobroCancel ? "chk-activo" : ""}`} style={{ marginBottom:f.cobroCancel ? "10px" : 0 }} onClick={() => upd("cobroCancel", !f.cobroCancel)}>
+                              <div className={`cobro-chk-box ${f.cobroCancel ? "on" : ""}`}>{f.cobroCancel ? "✓" : ""}</div>
+                              <span className={`cobro-chk-label ${f.cobroCancel ? "on" : ""}`}>{f.cobroCancel ? "Se cobra esta sesión" : "Registrar cobro por esta cancelación"}</span>
                             </div>
-                            {f.cancelEfectivo && (
-                              <>
-                                <div
-                                  style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "1fr 1fr",
-                                    gap: "8px",
-                                    marginBottom: "8px",
-                                  }}
-                                >
-                                  <div>
-                                    <div className="modal-label">Monto $</div>
-                                    <input
-                                      className="modal-input"
-                                      type="number"
-                                      style={{
-                                        fontFamily: "var(--mono)",
-                                        marginBottom: 0,
-                                      }}
-                                      placeholder="0"
-                                      value={f.montoCancel ?? ""}
-                                      onChange={(e) =>
-                                        upd("montoCancel", e.target.value)
-                                      }
-                                    />
+                            {f.cobroCancel && (
+                              <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+                                <div style={{ background:"rgba(255,255,255,.04)", border:`1px solid ${f.cancelEfectivo ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`, borderRadius:"12px", padding:"10px 12px" }}>
+                                  <div className={`cobro-chk-row ${f.cancelEfectivo ? "chk-activo" : ""}`} style={{ marginBottom:f.cancelEfectivo ? "10px" : 0 }} onClick={() => upd("cancelEfectivo", !f.cancelEfectivo)}>
+                                    <div className={`cobro-chk-box ${f.cancelEfectivo ? "on" : ""}`}>{f.cancelEfectivo ? "✓" : ""}</div>
+                                    <span className={`cobro-chk-label ${f.cancelEfectivo ? "on" : ""}`}>💵 Cobro en efectivo / transferencia</span>
                                   </div>
-                                  <div>
-                                    <div className="modal-label">Método</div>
-                                    <select
-                                      className="modal-select"
-                                      style={{ marginBottom: 0 }}
-                                      value={
-                                        f.metodoCancelEfectivo || "efectivo"
-                                      }
-                                      onChange={(e) =>
-                                        upd(
-                                          "metodoCancelEfectivo",
-                                          e.target.value,
-                                        )
-                                      }
-                                    >
-                                      <option value="efectivo">
-                                        💵 Efectivo
-                                      </option>
-                                      <option value="transferencia">
-                                        📱 Transferencia
-                                      </option>
-                                    </select>
-                                  </div>
-                                </div>
-                                <div
-                                  className={`cobro-chk-row ${f.cancelAbonado ? "chk-activo" : ""}`}
-                                  onClick={() =>
-                                    upd("cancelAbonado", !f.cancelAbonado)
-                                  }
-                                >
-                                  <div
-                                    className={`cobro-chk-box ${f.cancelAbonado ? "on" : ""}`}
-                                  >
-                                    {f.cancelAbonado ? "✓" : ""}
-                                  </div>
-                                  <span
-                                    className={`cobro-chk-label ${f.cancelAbonado ? "on" : ""}`}
-                                  >
-                                    {f.cancelAbonado
-                                      ? "✅ Abonado"
-                                      : "⏳ Pendiente — no abonado aún"}
-                                  </span>
-                                  {f.cancelAbonado && f.montoCancel > 0 && (
-                                    <span
-                                      style={{
-                                        marginLeft: "auto",
-                                        fontFamily: "var(--mono)",
-                                        fontSize: "12px",
-                                        color: "var(--do)",
-                                      }}
-                                    >
-                                      $
-                                      {Number(f.montoCancel).toLocaleString(
-                                        "es-AR",
-                                      )}
-                                    </span>
+                                  {f.cancelEfectivo && (
+                                    <>
+                                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", marginBottom:"8px" }}>
+                                        <div><div className="modal-label">Monto $</div><input className="modal-input" type="number" style={{ fontFamily:"var(--mono)", marginBottom:0 }} placeholder="0" value={f.montoCancel ?? ""} onChange={(e) => upd("montoCancel", e.target.value)} /></div>
+                                        <div><div className="modal-label">Método</div><select className="modal-select" style={{ marginBottom:0 }} value={f.metodoCancelEfectivo || "efectivo"} onChange={(e) => upd("metodoCancelEfectivo", e.target.value)}><option value="efectivo">💵 Efectivo</option><option value="transferencia">📱 Transferencia</option></select></div>
+                                      </div>
+                                      <div className={`cobro-chk-row ${f.cancelAbonado ? "chk-activo" : ""}`} onClick={() => upd("cancelAbonado", !f.cancelAbonado)}>
+                                        <div className={`cobro-chk-box ${f.cancelAbonado ? "on" : ""}`}>{f.cancelAbonado ? "✓" : ""}</div>
+                                        <span className={`cobro-chk-label ${f.cancelAbonado ? "on" : ""}`}>{f.cancelAbonado ? "✅ Abonado" : "⏳ Pendiente"}</span>
+                                        {f.cancelAbonado && f.montoCancel > 0 && <span style={{ marginLeft:"auto", fontFamily:"var(--mono)", fontSize:"12px", color:"var(--do)" }}>${Number(f.montoCancel).toLocaleString("es-AR")}</span>}
+                                      </div>
+                                    </>
                                   )}
                                 </div>
-                              </>
-                            )}
-                          </div>
-
-                          {/* ── BLOQUE ORDEN OS ── */}
-                          <div
-                            style={{
-                              background: "rgba(255,255,255,.04)",
-                              border: `1px solid ${f.cancelOrden ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
-                              borderRadius: "12px",
-                              padding: "10px 12px",
-                            }}
-                          >
-                            <div
-                              className={`cobro-chk-row ${f.cancelOrden ? "chk-activo" : ""}`}
-                              style={{
-                                marginBottom: f.cancelOrden ? "10px" : 0,
-                              }}
-                              onClick={() => upd("cancelOrden", !f.cancelOrden)}
-                            >
-                              <div
-                                className={`cobro-chk-box ${f.cancelOrden ? "on" : ""}`}
-                              >
-                                {f.cancelOrden ? "✓" : ""}
+                                <div style={{ background:"rgba(255,255,255,.04)", border:`1px solid ${f.cancelOrden ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`, borderRadius:"12px", padding:"10px 12px" }}>
+                                  <div className={`cobro-chk-row ${f.cancelOrden ? "chk-activo" : ""}`} style={{ marginBottom:f.cancelOrden ? "10px" : 0 }} onClick={() => upd("cancelOrden", !f.cancelOrden)}>
+                                    <div className={`cobro-chk-box ${f.cancelOrden ? "on" : ""}`}>{f.cancelOrden ? "✓" : ""}</div>
+                                    <span className={`cobro-chk-label ${f.cancelOrden ? "on" : ""}`}>🏥 Cobro con orden Obra Social</span>
+                                  </div>
+                                  {f.cancelOrden && (
+                                    <>
+                                      <div style={{ marginBottom:"8px" }}><div className="modal-label">Token de orden</div><input className="modal-input" type="text" style={{ fontFamily:"var(--mono)", marginBottom:0 }} placeholder="Token para marcar como saldado..." value={f.cancelOrdenToken || ""} onChange={(e) => upd("cancelOrdenToken", e.target.value)} /></div>
+                                      <div className={`cobro-chk-row ${f.cancelOrdenSaldada ? "chk-activo" : ""}`} onClick={() => upd("cancelOrdenSaldada", !f.cancelOrdenSaldada)}>
+                                        <div className={`cobro-chk-box ${f.cancelOrdenSaldada ? "on" : ""}`}>{f.cancelOrdenSaldada ? "✓" : ""}</div>
+                                        <span className={`cobro-chk-label ${f.cancelOrdenSaldada ? "on" : ""}`}>{f.cancelOrdenSaldada ? "✅ Token provisto — orden saldada" : "⏳ Token pendiente"}</span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                              <span
-                                className={`cobro-chk-label ${f.cancelOrden ? "on" : ""}`}
-                              >
-                                🏥 Cobro con orden Obra Social
-                              </span>
-                            </div>
-                            {f.cancelOrden && (
-                              <>
-                                <div style={{ marginBottom: "8px" }}>
-                                  <div className="modal-label">
-                                    Token de orden (si ya fue provisto)
-                                  </div>
-                                  <input
-                                    className="modal-input"
-                                    type="text"
-                                    style={{
-                                      fontFamily: "var(--mono)",
-                                      marginBottom: 0,
-                                    }}
-                                    placeholder="Ingresar token para marcar como saldado..."
-                                    value={f.cancelOrdenToken || ""}
-                                    onChange={(e) =>
-                                      upd("cancelOrdenToken", e.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div
-                                  className={`cobro-chk-row ${f.cancelOrdenSaldada ? "chk-activo" : ""}`}
-                                  onClick={() =>
-                                    upd(
-                                      "cancelOrdenSaldada",
-                                      !f.cancelOrdenSaldada,
-                                    )
-                                  }
-                                >
-                                  <div
-                                    className={`cobro-chk-box ${f.cancelOrdenSaldada ? "on" : ""}`}
-                                  >
-                                    {f.cancelOrdenSaldada ? "✓" : ""}
-                                  </div>
-                                  <span
-                                    className={`cobro-chk-label ${f.cancelOrdenSaldada ? "on" : ""}`}
-                                  >
-                                    {f.cancelOrdenSaldada
-                                      ? "✅ Token provisto — orden saldada"
-                                      : "⏳ Token pendiente — orden sin emitir"}
-                                  </span>
-                                </div>
-                              </>
                             )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                {/* ── DIVISOR ── */}
-                <div
-                  style={{
-                    borderTop: "1px solid rgba(255,255,255,0.1)",
-                    margin: "16px 0 14px 0",
-                  }}
-                ></div>
-
-                {/* ── FORMA DE COBRO (solo cuando la sesión no fue cancelada/reprogramada) ── */}
-                {f.tipo !== "AT" &&
-                  f.estado !== "cancelo" &&
-                  f.estado !== "reprogramo" && (
-                    <div
-                      className="cobro-panel"
-                      style={{ marginBottom: "10px" }}
-                    >
-                      <div className="cobro-panel-title">💰 Forma de cobro</div>
-
-                      {/* Toggle modalidad */}
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "6px",
-                          marginBottom: "12px",
-                        }}
-                      >
-                        <button
-                          className={`btn ${f.modalidadPago === "particular" ? "btn-g" : "btn-sec"}`}
-                          style={{ fontSize: "12px", padding: "6px 14px" }}
-                          onClick={() => upd("modalidadPago", "particular")}
-                        >
-                          👤 Particular
-                        </button>
-                        <button
-                          className={`btn ${f.modalidadPago === "obra_social" ? "btn-g" : "btn-sec"}`}
-                          style={{ fontSize: "12px", padding: "6px 14px" }}
-                          onClick={() => upd("modalidadPago", "obra_social")}
-                        >
-                          🏥 Obra Social
-                        </button>
+                        ) : (
+                          <div className="cobro-panel">
+                            <div style={{ display:"flex", gap:"6px", marginBottom:"12px" }}>
+                              <button className={`btn ${f.modalidadPago === "particular" ? "btn-g" : "btn-sec"}`} style={{ fontSize:"12px", padding:"6px 14px" }} onClick={() => upd("modalidadPago", "particular")}>👤 Particular</button>
+                              <button className={`btn ${f.modalidadPago === "obra_social" ? "btn-g" : "btn-sec"}`} style={{ fontSize:"12px", padding:"6px 14px" }} onClick={() => upd("modalidadPago", "obra_social")}>🏥 Obra Social</button>
+                            </div>
+                            {f.modalidadPago === "particular" && (
+                              <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+                                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", alignItems:"end" }}>
+                                  <div><div className="modal-label">Honorarios $</div><input className="modal-input" type="number" style={{ fontFamily:"var(--mono)", marginBottom:0 }} placeholder="0" value={f.montoParticular ?? ""} onChange={(e) => upd("montoParticular", e.target.value)} /></div>
+                                  <div><div className="modal-label">Método</div><select className="modal-select" style={{ marginBottom:0 }} value={f.metodoPagoParticular || "efectivo"} onChange={(e) => upd("metodoPagoParticular", e.target.value)}><option value="efectivo">💵 Efectivo</option><option value="transferencia">📱 Transferencia</option></select></div>
+                                </div>
+                                <div className={`cobro-chk-row ${f.particularAbonado ? "chk-activo" : ""}`} onClick={() => upd("particularAbonado", !f.particularAbonado)}>
+                                  <div className={`cobro-chk-box ${f.particularAbonado ? "on" : ""}`}>{f.particularAbonado ? "✓" : ""}</div>
+                                  <span className={`cobro-chk-label ${f.particularAbonado ? "on" : ""}`}>{f.particularAbonado ? "✅ Honorarios abonados" : "Marcar como abonado"}</span>
+                                  {f.particularAbonado && f.montoParticular > 0 && <span style={{ marginLeft:"auto", fontFamily:"var(--mono)", fontSize:"12px", color:"var(--do)" }}>${Number(f.montoParticular).toLocaleString("es-AR")}</span>}
+                                </div>
+                              </div>
+                            )}
+                            {f.modalidadPago === "obra_social" && (
+                              <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+                                <div className="modal-label" style={{ marginBottom:0 }}>Coseguro</div>
+                                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", alignItems:"end" }}>
+                                  <input className="modal-input" type="number" style={{ fontFamily:"var(--mono)", marginBottom:0 }} placeholder="0" value={f.coseguroMonto ?? ""} onChange={(e) => upd("coseguroMonto", e.target.value)} />
+                                  <select className="modal-select" style={{ marginBottom:0 }} value={f.metodoPagoOS || "efectivo"} onChange={(e) => upd("metodoPagoOS", e.target.value)}><option value="efectivo">💵 Efectivo</option><option value="transferencia">📱 Transferencia</option></select>
+                                </div>
+                                <div className={`cobro-chk-row ${f.coseguroAbonado ? "chk-activo" : ""}`} onClick={() => upd("coseguroAbonado", !f.coseguroAbonado)}>
+                                  <div className={`cobro-chk-box ${f.coseguroAbonado ? "on" : ""}`}>{f.coseguroAbonado ? "✓" : ""}</div>
+                                  <span className={`cobro-chk-label ${f.coseguroAbonado ? "on" : ""}`}>{f.coseguroAbonado ? "✅ Coseguro abonado" : "Marcar coseguro como abonado"}</span>
+                                  {f.coseguroAbonado && f.coseguroMonto > 0 && <span style={{ marginLeft:"auto", fontFamily:"var(--mono)", fontSize:"12px", color:"var(--do)" }}>${Number(f.coseguroMonto).toLocaleString("es-AR")}</span>}
+                                </div>
+                                <div className="modal-label" style={{ marginTop:"4px", marginBottom:0 }}>Orden de atención</div>
+                                <div style={{ display:"flex", gap:"8px" }}>
+                                  <div className={`cobro-chk-row ${f.ordenEmitida ? "chk-activo" : ""}`} style={{ flex:1 }} onClick={() => upd("ordenEmitida", !f.ordenEmitida)}><div className={`cobro-chk-box ${f.ordenEmitida ? "on" : ""}`}>{f.ordenEmitida ? "✓" : ""}</div><span className={`cobro-chk-label ${f.ordenEmitida ? "on" : ""}`}>{f.ordenEmitida ? "✅ Emitida" : "Emitida"}</span></div>
+                                  <div className={`cobro-chk-row ${f.ordenFirmada ? "chk-activo" : ""}`} style={{ flex:1 }} onClick={() => upd("ordenFirmada", !f.ordenFirmada)}><div className={`cobro-chk-box ${f.ordenFirmada ? "on" : ""}`}>{f.ordenFirmada ? "✓" : ""}</div><span className={`cobro-chk-label ${f.ordenFirmada ? "on" : ""}`}>{f.ordenFirmada ? "✅ Firmada" : "Firmada"}</span></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
+                    )}
+                  </div>
+                )}
 
-                      {/* ── SECCIÓN PARTICULAR ── */}
-                      {f.modalidadPago === "particular" && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 1fr",
-                              gap: "8px",
-                              alignItems: "end",
-                            }}
-                          >
-                            <div>
-                              <div className="modal-label">Honorarios $</div>
-                              <input
-                                className="modal-input"
-                                type="number"
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  marginBottom: 0,
-                                }}
-                                placeholder="0"
-                                value={f.montoParticular ?? ""}
-                                onChange={(e) =>
-                                  upd("montoParticular", e.target.value)
-                                }
-                              />
-                            </div>
-                            <div>
-                              <div className="modal-label">Método</div>
-                              <select
-                                className="modal-select"
-                                style={{ marginBottom: 0 }}
-                                value={f.metodoPagoParticular || "efectivo"}
-                                onChange={(e) =>
-                                  upd("metodoPagoParticular", e.target.value)
-                                }
-                              >
-                                <option value="efectivo">💵 Efectivo</option>
-                                <option value="transferencia">
-                                  📱 Transferencia
-                                </option>
-                              </select>
-                            </div>
-                          </div>
-                          {/* Checkbox Abonado */}
-                          <div
-                            className={`cobro-chk-row ${f.particularAbonado ? "chk-activo" : ""}`}
-                            onClick={() =>
-                              upd("particularAbonado", !f.particularAbonado)
-                            }
-                          >
-                            <div
-                              className={`cobro-chk-box ${f.particularAbonado ? "on" : ""}`}
-                            >
-                              {f.particularAbonado ? "✓" : ""}
-                            </div>
-                            <span
-                              className={`cobro-chk-label ${f.particularAbonado ? "on" : ""}`}
-                            >
-                              {f.particularAbonado
-                                ? "✅ Honorarios abonados"
-                                : "Marcar como abonado"}
-                            </span>
-                            {f.particularAbonado && f.montoParticular > 0 && (
-                              <span
-                                style={{
-                                  marginLeft: "auto",
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "12px",
-                                  color: "var(--do)",
-                                }}
-                              >
-                                $
-                                {Number(f.montoParticular).toLocaleString(
-                                  "es-AR",
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ── SECCIÓN OBRA SOCIAL ── */}
-                      {f.modalidadPago === "obra_social" && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                          }}
-                        >
-                          {/* Coseguro */}
-                          <div
-                            className="modal-label"
-                            style={{ marginBottom: 0 }}
-                          >
-                            Coseguro
-                          </div>
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 1fr",
-                              gap: "8px",
-                              alignItems: "end",
-                            }}
-                          >
-                            <div>
-                              <input
-                                className="modal-input"
-                                type="number"
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  marginBottom: 0,
-                                }}
-                                placeholder="0"
-                                value={f.coseguroMonto ?? ""}
-                                onChange={(e) =>
-                                  upd("coseguroMonto", e.target.value)
-                                }
-                              />
-                            </div>
-                            <div>
-                              <select
-                                className="modal-select"
-                                style={{ marginBottom: 0 }}
-                                value={f.metodoPagoOS || "efectivo"}
-                                onChange={(e) =>
-                                  upd("metodoPagoOS", e.target.value)
-                                }
-                              >
-                                <option value="efectivo">💵 Efectivo</option>
-                                <option value="transferencia">
-                                  📱 Transferencia
-                                </option>
-                              </select>
-                            </div>
-                          </div>
-                          <div
-                            className={`cobro-chk-row ${f.coseguroAbonado ? "chk-activo" : ""}`}
-                            onClick={() =>
-                              upd("coseguroAbonado", !f.coseguroAbonado)
-                            }
-                          >
-                            <div
-                              className={`cobro-chk-box ${f.coseguroAbonado ? "on" : ""}`}
-                            >
-                              {f.coseguroAbonado ? "✓" : ""}
-                            </div>
-                            <span
-                              className={`cobro-chk-label ${f.coseguroAbonado ? "on" : ""}`}
-                            >
-                              {f.coseguroAbonado
-                                ? "✅ Coseguro abonado"
-                                : "Marcar coseguro como abonado"}
-                            </span>
-                            {f.coseguroAbonado && f.coseguroMonto > 0 && (
-                              <span
-                                style={{
-                                  marginLeft: "auto",
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "12px",
-                                  color: "var(--do)",
-                                }}
-                              >
-                                $
-                                {Number(f.coseguroMonto).toLocaleString(
-                                  "es-AR",
-                                )}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Orden de atención */}
-                          <div
-                            className="modal-label"
-                            style={{ marginTop: "4px", marginBottom: 0 }}
-                          >
-                            Orden de atención
-                          </div>
-                          <div style={{ display: "flex", gap: "8px" }}>
-                            <div
-                              className={`cobro-chk-row ${f.ordenEmitida ? "chk-activo" : ""}`}
-                              style={{ flex: 1 }}
-                              onClick={() =>
-                                upd("ordenEmitida", !f.ordenEmitida)
-                              }
-                            >
-                              <div
-                                className={`cobro-chk-box ${f.ordenEmitida ? "on" : ""}`}
-                              >
-                                {f.ordenEmitida ? "✓" : ""}
+                {/* ─── 4. CALIFICACIÓN DE OBJETIVOS ─── */}
+                {tieneObjetivos && (
+                  <div className="acc-row">
+                    <div className="acc-head" onClick={() => toggleSec("calific")}>
+                      <div className="acc-label-col">
+                        <span className="acc-label">Calificación de objetivos</span>
+                        <span className="acc-value">{calificResumen}</span>
+                      </div>
+                      <div className="acc-right">
+                        <span className={calificCmpleto ? "acc-check-done" : "acc-check-pend"}>{calificCmpleto ? "✓" : "○"}</span>
+                        <span className="acc-arrow">{openSection === "calific" ? "▴" : "▾"}</span>
+                      </div>
+                    </div>
+                    {openSection === "calific" && (
+                      <div className="acc-body">
+                        {[{ num:1, texto:objSemana?.obj1, campo:"obj1Estado" }, { num:2, texto:objSemana?.obj2, campo:"obj2Estado" }]
+                          .filter((item) => item.texto)
+                          .map((item) => (
+                            <div key={item.num} style={{ marginBottom:"10px" }}>
+                              <div style={{ fontFamily:"var(--sans)", fontSize:"12px", fontWeight:600, color:"rgba(255,255,255,.75)", marginBottom:"6px" }}>
+                                <span style={{ fontFamily:"var(--mono)", fontSize:"10px", color:"var(--do)", marginRight:"6px" }}>{item.num}.</span>{item.texto}
                               </div>
-                              <span
-                                className={`cobro-chk-label ${f.ordenEmitida ? "on" : ""}`}
-                              >
-                                {f.ordenEmitida ? "✅ Emitida" : "Emitida"}
-                              </span>
-                            </div>
-                            <div
-                              className={`cobro-chk-row ${f.ordenFirmada ? "chk-activo" : ""}`}
-                              style={{ flex: 1 }}
-                              onClick={() =>
-                                upd("ordenFirmada", !f.ordenFirmada)
-                              }
-                            >
-                              <div
-                                className={`cobro-chk-box ${f.ordenFirmada ? "on" : ""}`}
-                              >
-                                {f.ordenFirmada ? "✓" : ""}
+                              <div style={{ display:"flex", gap:"8px" }}>
+                                {[{ val:"malo", emoji:"😞", label:"No logrado", bg:"rgba(248,113,113,.15)", bord:"rgba(248,113,113,.4)", col:"#F87171" }, { val:"bueno", emoji:"😊", label:"Logrado", bg:"rgba(125,204,144,.15)", bord:"rgba(125,204,144,.4)", col:"#7DCC90" }].map((opt) => {
+                                  const sel = f[item.campo] === opt.val;
+                                  return <button key={opt.val} onClick={() => handleObjRating(item.campo, opt.val)} title={opt.label} style={{ flex:1, padding:"7px 4px", borderRadius:"10px", border:`2px solid ${sel ? opt.bord : "rgba(255,255,255,.08)"}`, background:sel ? opt.bg : "rgba(255,255,255,.03)", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:"2px", transition:"all .15s", transform:sel ? "scale(1.06)" : "scale(1)" }}><span style={{ fontSize:"20px", lineHeight:1 }}>{opt.emoji}</span><span style={{ fontFamily:"var(--mono)", fontSize:"9px", color:sel ? opt.col : "rgba(255,255,255,.3)", letterSpacing:".04em" }}>{opt.label}</span></button>;
+                                })}
                               </div>
-                              <span
-                                className={`cobro-chk-label ${f.ordenFirmada ? "on" : ""}`}
-                              >
-                                {f.ordenFirmada ? "✅ Firmada" : "Firmada"}
-                              </span>
                             </div>
-                          </div>
-                        </div>
-                      )}
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ─── 5. NOTAS Y COMENTARIOS ─── */}
+                <div className="acc-row" style={{ borderBottom:"none" }}>
+                  <div className="acc-head" onClick={() => toggleSec("notas")}>
+                    <div className="acc-label-col">
+                      <span className="acc-label">Notas y comentarios</span>
+                      <span className="acc-value">{notasResumen}</span>
+                    </div>
+                    <div className="acc-right">
+                      <span className="acc-check-done">✓</span>
+                      <span className="acc-arrow">{openSection === "notas" ? "▴" : "▾"}</span>
+                    </div>
+                  </div>
+                  {openSection === "notas" && (
+                    <div className="acc-body">
+                      <div style={{ display:"flex", gap:"4px", background:"rgba(0,0,0,.25)", border:"1px solid rgba(200,146,42,0.2)", borderRadius:"50px", padding:"3px", marginBottom:"6px" }}>
+                        {[{ key:"clinica", label:"🩺 Clínica" }, { key:"admin", label:"📋 Admin" }, { key:"asistencia", label:"📆 Asistencia" }].map((t) => {
+                          const activo = notasTab === t.key;
+                          const tieneContenido = !!(t.key === "clinica" ? f.evolucionClinica : t.key === "admin" ? f.notasAdmin : f.notasAsistencia);
+                          const alertaActiva = !!(f.notasAlertas?.[t.key]);
+                          return (
+                            <button key={t.key} onClick={() => setNotasTab(t.key)} style={{ flex:1, padding:"8px 10px", borderRadius:"50px", border:activo ? "2px solid var(--do)" : "2px solid rgba(200,146,42,.35)", cursor:"pointer", fontFamily:"var(--sans)", fontSize:"13px", fontWeight:activo ? 800 : 600, background:activo ? "var(--vm)" : "transparent", color:activo ? "#fff" : "rgba(255,255,255,0.6)", transition:"all .25s ease", position:"relative", display:"flex", alignItems:"center", justifyContent:"center", gap:"5px", boxShadow:activo ? "0 4px 10px rgba(0,0,0,0.25)" : "none" }}>
+                              <span style={{ fontSize:"14px" }}>{t.label.split(" ")[0]}</span>
+                              <span>{t.label.split(" ")[1]}</span>
+                              {tieneContenido && !activo && <span style={{ position:"absolute", top:"4px", right:"28px", width:"6px", height:"6px", borderRadius:"50%", background:"var(--do)", boxShadow:"0 0 6px var(--do)" }} />}
+                              <span style={{ fontSize:"10px", color:alertaActiva ? "var(--do)" : "rgba(255,255,255,.35)" }}>⚠</span>
+                              <div onClick={(e) => { e.stopPropagation(); upd("notasAlertas", { ...(f.notasAlertas || {}), [t.key]: !alertaActiva }); }} title={alertaActiva ? "Quitar alerta" : "Marcar como alerta"} style={{ width:"14px", height:"14px", borderRadius:"3px", border:`2px solid ${alertaActiva ? "var(--do)" : "rgba(200,146,42,.4)"}`, background:alertaActiva ? "var(--do)" : "transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:"9px", color:"var(--vd)", fontWeight:900 }}>{alertaActiva ? "✓" : ""}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={{ fontFamily:"var(--mono)", fontSize:"10px", color:"rgba(200,146,42,.55)", marginBottom:"8px", letterSpacing:".04em" }}>⚠ Genera una alerta en "Novedades de la semana"</div>
+                      {notasTab === "clinica" && <textarea className="modal-textarea" style={{ minHeight:"80px", border:"2px solid var(--do)" }} value={f.evolucionClinica || ""} onChange={(e) => upd("evolucionClinica", e.target.value)} placeholder="EVOLUCIÓN CLÍNICA: Desarrollo de la sesión, temas abordados, recursos utilizados…" />}
+                      {notasTab === "admin" && <textarea className="modal-textarea" style={{ minHeight:"80px", border:"2px solid var(--do)" }} value={f.notasAdmin || ""} onChange={(e) => upd("notasAdmin", e.target.value)} placeholder="NOVEDADES ADMIN: Acuerdos de pago, autorizaciones OS, pagos parciales…" />}
+                      {notasTab === "asistencia" && <textarea className="modal-textarea" style={{ minHeight:"80px", border:"2px solid var(--do)" }} value={f.notasAsistencia || ""} onChange={(e) => upd("notasAsistencia", e.target.value)} placeholder="CONTROL ASISTENCIA: Motivo de cancelación, reprogramación, llegada tardía…" />}
                     </div>
                   )}
+                </div>
 
-                {/* ── NOTAS Y COMENTARIOS ── */}
-                <div style={{
-                  marginTop: "2px",
-                  background: "rgba(200,146,42,0.07)",
-                  border: "1px solid rgba(200,146,42,0.3)",
-                  borderRadius: "12px",
-                  padding: "14px",
-                  marginBottom: "12px",
-                }}>
-                  <div style={{ fontFamily: "var(--serif)", color: "var(--do)", fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
-                    💬 Notas y comentarios
+                {/* PANEL CONFLICTOS */}
+                {showConflictos && conflictos.length > 0 && (
+                  <div style={{ background:"rgba(122,40,0,.25)", border:"2px solid rgba(249,115,22,.4)", borderRadius:"12px", padding:"14px", marginTop:"8px" }}>
+                    <div style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"#FED7AA", textTransform:"uppercase", letterSpacing:".06em", marginBottom:"8px" }}>⚠️ Superposición detectada</div>
+                    {conflictos.map((c, i) => { const cpac = pacientes.find((p) => p.id === c.pacienteId); return <div key={i} style={{ fontFamily:"var(--mono)", fontSize:"12px", color:"rgba(255,255,255,.7)", marginBottom:"4px", paddingLeft:"8px", borderLeft:"2px solid rgba(249,115,22,.5)" }}><span style={{ color:"#FED7AA" }}>{c.horaInicio}–{c.horaFin}</span>{cpac && <span style={{ marginLeft:"6px" }}>{cpac.nombre} {cpac.apellido}</span>}</div>; })}
+                    <div style={{ display:"flex", gap:"8px", marginTop:"10px" }}>
+                      <button className="btn btn-sec" style={{ fontSize:"12px", padding:"6px 12px" }} onClick={() => { setShowConflictos(false); setConflictos([]); }}>Corregir</button>
+                      <button style={{ borderRadius:"50px", padding:"6px 14px", fontSize:"12px", fontFamily:"var(--sans)", fontWeight:600, background:"rgba(249,115,22,.25)", border:"2px solid rgba(249,115,22,.5)", color:"#FED7AA", cursor:"pointer" }} onClick={handleSaveForzado}>Guardar de todos modos</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* NOTAS Y COMENTARIOS — ancla para nuevo contenido (eliminado, migrado al acordeón) */}
+                <div style={{ display:"none" }}></div>
                   </div>
                   {/* Tabs */}
                   <div
@@ -4415,7 +4164,7 @@
                     )}
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    <button className="btn btn-sec" onClick={onClose}>
+                    <button className="btn btn-sec" onClick={tryClose}>
                       Cancelar
                     </button>
                     <button className="btn btn-g" onClick={handleSave}>
@@ -4552,6 +4301,9 @@
         const catActual =
           RESERVA_CATS.find((c) => c.v === f.categoria) || RESERVA_CATS[0];
         const resOverlayMDRef = useRef(false);
+        const [confirmCancel, setConfirmCancel] = useState(false);
+        function tryClose() { setConfirmCancel(true); }
+        function doClose() { setConfirmCancel(false); onClose(); }
 
         return ReactDOM.createPortal(
           <div
@@ -4561,20 +4313,34 @@
             }}
             onClick={(e) => {
               if (e.target === e.currentTarget && resOverlayMDRef.current)
-                onClose();
+                tryClose();
               resOverlayMDRef.current = false;
             }}
           >
             <div className="modal-card" style={{ maxWidth: "440px" }}>
               <div className="modal-bar" />
-              <div className="modal-header">
-                <span className="modal-title">
-                  {isEditar ? "Editar reserva" : "Reservar horario"}
-                </span>
-                <button className="modal-close" onClick={onClose}>
-                  ✕
-                </button>
-              </div>
+              {confirmCancel ? (
+                <div className="modal-confirm-cancel">
+                  <span className="modal-confirm-cancel-text">¿Salir sin guardar los cambios?</span>
+                  <div className="modal-confirm-cancel-btns">
+                    <button className="btn btn-danger" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={doClose}>Sí, salir</button>
+                    <button className="btn btn-sec" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={() => setConfirmCancel(false)}>No, quedarme</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="modal-header">
+                  <span className="modal-title">
+                    {isEditar ? "Editar reserva" : "Reservar horario"}
+                  </span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    {isEditar && (
+                      <button className="modal-icon-btn danger" onClick={() => onDelete(f)} title="Eliminar">🗑️</button>
+                    )}
+                    <button className="modal-icon-btn" onClick={handleSave} title="Guardar">💾</button>
+                    <button className="modal-icon-btn" onClick={tryClose} title="Cerrar">✕</button>
+                  </div>
+                </div>
+              )}
               <div className="modal-body">
                 {/* COLOR DE ETIQUETA */}
                 <div style={{ marginBottom: "14px" }}>
@@ -4758,7 +4524,7 @@
                     )}
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    <button className="btn btn-sec" onClick={onClose}>
+                    <button className="btn btn-sec" onClick={tryClose}>
                       Cancelar
                     </button>
                     <button className="btn btn-g" onClick={handleSave}>
@@ -4980,12 +4746,14 @@
 
         /* Novedades: sesiones con pendientes de cobro/orden/notas esta semana */
         const novedadesItems = weekSes
-          .filter((s) => tienePendientePago(s, hoyStr) || tieneNotasAlerta(s))
+          .filter((s) => tienePendientePago(s, hoyStr) || tieneNotasAlerta(s) || esTurnoPasadoSinCalificar(s))
           .map((s) => {
             const pac = pacientes.find((p) => p.id === s.pacienteId);
             const nombre = pac ? `${pac.nombre} ${pac.apellido}` : "Paciente";
             const base = descPendiente(s, nombre, hoyStr);
             const na = s.notasAlertas || {};
+            if (esTurnoPasadoSinCalificar(s))
+              base.items.push({ texto: "Turno ya pasó — calificar estado", campo: "estado" });
             if (na.clinica)
               base.items.push({ texto: "Notas pendientes en Clínica", campo: "notasAlertas_clinica" });
             if (na.admin)
@@ -6762,7 +6530,10 @@
         const [tab, setTab] = useState("personal");
         const [f, setF] = useState({ ...EMPTY_PAC });
         const [errors, setErrors] = useState({});
+        const [confirmCancel, setConfirmCancel] = useState(false);
         const pacOverlayMDRef = useRef(false);
+        function tryClose() { setConfirmCancel(true); }
+        function doClose() { setConfirmCancel(false); onClose(); }
         // Obras sociales desde configuración (se lee fresco al abrir el modal)
         const cfgOS = getData("hgsp_config")?.obrasSociales || [];
 
@@ -6900,20 +6671,31 @@
             }}
             onClick={(e) => {
               if (e.target === e.currentTarget && pacOverlayMDRef.current)
-                onClose();
+                tryClose();
               pacOverlayMDRef.current = false;
             }}
           >
             <div className="modal-card modal-lg">
               <div className="modal-bar"></div>
-              <div className="modal-header">
-                <span className="modal-title">
-                  {paciente ? "Editar paciente" : "Nuevo paciente"}
-                </span>
-                <button className="modal-close" onClick={onClose}>
-                  ✕
-                </button>
-              </div>
+              {confirmCancel ? (
+                <div className="modal-confirm-cancel">
+                  <span className="modal-confirm-cancel-text">¿Salir sin guardar los cambios?</span>
+                  <div className="modal-confirm-cancel-btns">
+                    <button className="btn btn-danger" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={doClose}>Sí, salir</button>
+                    <button className="btn btn-sec" style={{ padding: "5px 14px", fontSize: "13px" }} onClick={() => setConfirmCancel(false)}>No, quedarme</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="modal-header">
+                  <span className="modal-title">
+                    {paciente ? "Editar paciente" : "Nuevo paciente"}
+                  </span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <button className="modal-icon-btn" onClick={handleSave} title="Guardar">💾</button>
+                    <button className="modal-icon-btn" onClick={tryClose} title="Cerrar">✕</button>
+                  </div>
+                </div>
+              )}
 
               <div style={{ padding: "12px 22px 0" }}>
                 <Tabs
@@ -7833,7 +7615,7 @@
                   justifyContent: "flex-end",
                 }}
               >
-                <button className="btn btn-sec" onClick={onClose}>
+                <button className="btn btn-sec" onClick={tryClose}>
                   Cancelar
                 </button>
                 <button className="btn btn-g" onClick={handleSave}>
@@ -11892,6 +11674,7 @@
         const [editMode, setEditMode] = useState(false);
         const [draft, setDraft] = useState({});
         const [modalClear, setModalClear] = useState(false);
+        const [clearPin, setClearPin] = useState("");
         const [nuevoOS, setNuevoOS] = useState({
           nombre: "",
           valorOrden: "",
@@ -11958,9 +11741,12 @@
         }
 
         function handleClear() {
+          if (clearPin !== "1234") return;
           Object.keys(localStorage).forEach((key) => {
             if (key.startsWith("hgsp_")) localStorage.removeItem(key);
           });
+          setClearPin("");
+          setModalClear(false);
           window.location.reload();
         }
 
@@ -12783,7 +12569,7 @@
                 <div
                   className="modal-overlay"
                   onClick={(e) => {
-                    if (e.target === e.currentTarget) setModalClear(false);
+                    if (e.target === e.currentTarget) { setModalClear(false); setClearPin(""); }
                   }}
                 >
                   <div className="modal-card" style={{ maxWidth: "420px" }}>
@@ -12793,8 +12579,8 @@
                         ⚠️ Limpiar todos los datos
                       </span>
                       <button
-                        className="modal-close"
-                        onClick={() => setModalClear(false)}
+                        className="modal-icon-btn"
+                        onClick={() => { setModalClear(false); setClearPin(""); }}
                       >
                         ✕
                       </button>
@@ -12809,7 +12595,7 @@
                       <p
                         style={{
                           color: "rgba(255,255,255,.75)",
-                          marginBottom: "20px",
+                          marginBottom: "16px",
                           lineHeight: 1.7,
                         }}
                       >
@@ -12821,6 +12607,20 @@
                         eventos. El sistema se reiniciará con los datos de
                         ejemplo.
                       </p>
+                      <div style={{ marginBottom: "20px" }}>
+                        <div className="modal-label" style={{ marginBottom: "6px" }}>
+                          Ingresá el código de confirmación para continuar
+                        </div>
+                        <input
+                          className="modal-input"
+                          type="password"
+                          maxLength={4}
+                          placeholder="····"
+                          value={clearPin}
+                          onChange={(e) => setClearPin(e.target.value)}
+                          style={{ fontFamily: "var(--mono)", letterSpacing: "0.3em", textAlign: "center", maxWidth: "140px" }}
+                        />
+                      </div>
                       <div
                         style={{
                           display: "flex",
@@ -12830,13 +12630,15 @@
                       >
                         <button
                           className="btn btn-sec"
-                          onClick={() => setModalClear(false)}
+                          onClick={() => { setModalClear(false); setClearPin(""); }}
                         >
                           Cancelar
                         </button>
                         <button
                           className="btn btn-danger"
                           onClick={handleClear}
+                          disabled={clearPin !== "1234"}
+                          style={{ opacity: clearPin === "1234" ? 1 : 0.4, cursor: clearPin === "1234" ? "pointer" : "not-allowed" }}
                         >
                           Confirmar limpieza
                         </button>
