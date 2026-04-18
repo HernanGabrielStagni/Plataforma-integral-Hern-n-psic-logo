@@ -348,6 +348,17 @@
         color: #3A2810;
         margin-top: 1px;
       }
+      .page-header-btns {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        flex-shrink: 0;
+      }
+      @media (max-width: 767px) {
+        .page-header-btns { flex-direction: column; align-items: stretch; width: 100%; margin-top: 10px; }
+        .page-header-btns .btn, .page-header-btns button, .page-header-btns span { width: 100%; justify-content: center; }
+      }
 
       /* ── CARDS ── */
       .card {
@@ -2057,7 +2068,7 @@
             <div className="topbar-brand">
               <div className="topbar-icon">🌱</div>
               <div>
-                <div className="topbar-title">Plataforma Clínica</div>
+                <div className="topbar-title">Plataforma Integral</div>
                 <div className="topbar-subtitle">
                   Hernán Gabriel Stagni · MP 11919 · v1.0
                 </div>
@@ -4335,6 +4346,7 @@
         const [showOrdenes, setShowOrdenes] = useState(false);
         const [showNovedades, setShowNovedades] = useState(false);
         const [showStats, setShowStats] = useState(() => window.innerWidth >= 768);
+        const [showObjPanel, setShowObjPanel] = useState(() => window.innerWidth >= 768);
         const [showCoord, setShowCoord] = useState(false);
         const [coordPendientes, setCoordPendientes] = useState([]);
         const [objetivosSemana, setObjetivosSemana] = useState([]);
@@ -4858,13 +4870,40 @@
 
         return (
           <div>
-            <div className="page-header">
-              <div className="page-header-icon">📅</div>
-              <div>
-                <div className="page-header-title">Agenda</div>
-                <div className="page-header-sub">
-                  Gestión de turnos y sesiones — vista semanal y mensual
+            <div className="page-header" style={{ justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"14px" }}>
+                <div className="page-header-icon">📅</div>
+                <div className="page-header-title" style={{ fontSize:"39px", fontWeight:700, color:"#fff", letterSpacing:".02em", textShadow:"0 2px 6px rgba(0,0,0,.4)" }}>
+                  AGENDA
                 </div>
+              </div>
+              <div className="page-header-btns">
+                {vista === "semanal" && (
+                  semanaActivada ? (
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:"5px", padding:"6px 14px", borderRadius:"50px", border:"2px solid rgba(125,204,144,.35)", background:"rgba(125,204,144,.08)", fontFamily:"var(--mono)", fontSize:"11px", color:"#7DCC90", fontWeight:700 }}>
+                      ✓ Semana activada
+                    </span>
+                  ) : (
+                    <button className="btn btn-g" onClick={() => setModalConfirmActivar(true)}
+                      title="Transfiere los turnos fijos a la agenda semanal. ⚠️ Precaución: borra registros que se superpongan"
+                      style={{ display:"inline-flex", alignItems:"center", gap:"6px" }}>
+                      ⤵️ Turnos Fijos...
+                      {coordSemana.length > 0 && (
+                        <span style={{ background:"var(--vd)", color:"var(--do)", fontFamily:"var(--mono)", fontSize:"10px", fontWeight:700, borderRadius:"10px", padding:"1px 6px" }}>
+                          {coordSemana.length}
+                        </span>
+                      )}
+                    </button>
+                  )
+                )}
+                <button className="btn btn-g"
+                  onClick={() => setModalReserva({ reserva:null, fecha:hoyStr, hora:"10:00" })}>
+                  🔔 Reservar horario
+                </button>
+                <button className="btn btn-g"
+                  onClick={() => setModalTurno({ mode:"nuevo", sesion:null, fecha:hoyStr, hora:"10:00" })}>
+                  + Nuevo turno
+                </button>
               </div>
             </div>
 
@@ -4893,33 +4932,26 @@
               />
 
               {!editandoObj ? (
-                <div className="obj-panel-view">
-                  <div style={{ flexShrink: 0 }}>
-                    <div
-                      style={{
-                        fontFamily: "var(--serif2)",
-                        fontSize: "22px",
-                        fontWeight: 700,
-                        color: "var(--do)",
-                        lineHeight: 1.1,
-                        textShadow: "0 1px 4px rgba(0,0,0,.4)",
-                      }}
-                    >
+                <>
+                {/* Header colapsable de objetivos */}
+                <div
+                  onClick={() => setShowObjPanel(v => !v)}
+                  style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", userSelect:"none", marginBottom: showObjPanel ? "16px" : "0" }}
+                >
+                  <div>
+                    <div style={{ fontFamily:"var(--serif2)", fontSize:"22px", fontWeight:700, color:"var(--do)", lineHeight:1.1, textShadow:"0 1px 4px rgba(0,0,0,.4)" }}>
                       🎯 Objetivos
                     </div>
-                    <div
-                      style={{
-                        fontFamily: "var(--mono)",
-                        fontSize: "10px",
-                        color: "rgba(255,255,255,.3)",
-                        marginTop: "4px",
-                        letterSpacing: ".06em",
-                      }}
-                    >
+                    <div style={{ fontFamily:"var(--mono)", fontSize:"15px", color:"var(--do)", fontWeight:700, marginTop:"4px", letterSpacing:".04em" }}>
                       {weekLabel}
                     </div>
                   </div>
-
+                  <span style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"rgba(200,146,42,.5)", fontWeight:400 }}>
+                    {showObjPanel ? "▲ ocultar" : "▼ mostrar"}
+                  </span>
+                </div>
+                {showObjPanel && (
+                <div className="obj-panel-view">
                   <div
                     style={{
                       flex: 1,
@@ -5130,6 +5162,8 @@
                     ✏️ {objActual ? "Editar" : "Definir"}
                   </button>
                 </div>
+                )}
+                </>
               ) : (
                 <div>
                   <div
@@ -5818,38 +5852,6 @@
                 </>
               )}
 
-              {/* Botones de acción — responsive con .agenda-acciones */}
-              <div className="agenda-acciones">
-                {vista === "semanal" && (
-                  semanaActivada ? (
-                    <span style={{ display:"inline-flex", alignItems:"center", gap:"5px", padding:"6px 14px",
-                                   borderRadius:"50px", border:"2px solid rgba(125,204,144,.35)",
-                                   background:"rgba(125,204,144,.08)", fontFamily:"var(--mono)",
-                                   fontSize:"11px", color:"#7DCC90", fontWeight:700 }}>
-                      ✓ Semana activada
-                    </span>
-                  ) : (
-                    <button className="btn btn-g" onClick={() => setModalConfirmActivar(true)}
-                      style={{ display:"inline-flex", alignItems:"center", gap:"6px" }}>
-                      🗓️ Activar semana
-                      {coordSemana.length > 0 && (
-                        <span style={{ background:"var(--vd)", color:"var(--do)", fontFamily:"var(--mono)",
-                                       fontSize:"10px", fontWeight:700, borderRadius:"10px", padding:"1px 6px" }}>
-                          {coordSemana.length}
-                        </span>
-                      )}
-                    </button>
-                  )
-                )}
-                <button className="btn btn-sec"
-                  onClick={() => setModalReserva({ reserva:null, fecha:hoyStr, hora:"10:00" })}>
-                  🔒 Reservar horario
-                </button>
-                <button className="btn btn-g"
-                  onClick={() => setModalTurno({ mode:"nuevo", sesion:null, fecha:hoyStr, hora:"10:00" })}>
-                  + Nuevo turno
-                </button>
-              </div>
             </div>
 
             {/* LEYENDA TIPOS */}
