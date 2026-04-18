@@ -3469,12 +3469,10 @@
               )}
               <div className="modal-body">
                 {/* ─── 0. PACIENTE ─── */}
-                <div className="acc-row">
+                <div className="acc-row" style={{ border: "2px solid rgba(200,146,42,.75)" }}>
                   <div className="acc-head" onClick={() => !isEditar && toggleSec("paciente")} style={{ cursor: isEditar ? "default" : "pointer" }}>
-                    <span className={`acc-chk${busq ? " on" : ""}`}>✓</span>
-                    <span className="acc-label">Paciente</span>
-                    <span className="acc-value">{busq || "Sin seleccionar"}</span>
-                    {!isEditar && <span className="acc-arrow">{openSection === "paciente" ? "▴" : "▾"}</span>}
+                    <span style={{ fontFamily:"var(--serif)", fontSize:"16px", fontWeight:700, color:"var(--do)", letterSpacing:".01em" }}>{busq || "— Sin seleccionar —"}</span>
+                    {!isEditar && <span className="acc-arrow" style={{ marginLeft:"auto" }}>{openSection === "paciente" ? "▴" : "▾"}</span>}
                   </div>
                   {!isEditar && openSection === "paciente" && (
                     <div className="acc-body">
