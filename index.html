@@ -1080,12 +1080,22 @@
         }
         .topbar-actions .topbar-cta {
           display: inline-flex;
-          font-size: 12px;
+          font-size: 11px;
           padding: 6px 10px;
           gap: 4px;
+          white-space: nowrap;
         }
         .topbar-actions .topbar-cta span {
           font-size: 13px !important;
+        }
+        .topbar-row-2 {
+          padding: 8px 12px;
+        }
+        .topbar-section-title {
+          font-size: 20px !important;
+        }
+        .topbar-section-emoji {
+          font-size: 20px !important;
         }
         .topbar-center {
           display: none;
@@ -1162,6 +1172,12 @@
         }
         .card {
           border-left-width: 3px;
+        }
+        .agenda-toolbar {
+          justify-content: center;
+        }
+        .agenda-novedades-row {
+          justify-content: center;
         }
       }
 
@@ -2358,10 +2374,11 @@
               <div
                 style={{ display: "flex", alignItems: "center", gap: "12px" }}
               >
-                <span style={{ fontSize: "28px" }}>
+                <span className="topbar-section-emoji" style={{ fontSize: "28px" }}>
                   {current?.id === "agenda" ? "🗓️" : current?.emoji}
                 </span>
                 <span
+                  className="topbar-section-title"
                   style={{
                     fontFamily: "var(--sans)",
                     fontSize: "26px",
@@ -6931,7 +6948,7 @@
                     flexShrink: 0,
                   }}
                 >
-                  {showStats ? "▲ ocultar" : "▼ mostrar"}
+                  <span style={{ fontSize: "18px", lineHeight: 1 }}>{showStats ? "▲" : "▼"}</span>
                 </span>
               </button>
               {showStats && (
@@ -7093,6 +7110,7 @@
 
             {/* BOTÓN NOVEDADES DE LA SEMANA + CREAR RECORDATORIO */}
             <div
+              className="agenda-novedades-row"
               style={{
                 margin: "14px 0 0",
                 display: "flex",
@@ -7117,41 +7135,17 @@
                   fontWeight: 700,
                   cursor: "pointer",
                   transition: "all .2s",
+                  whiteSpace: "nowrap",
                   boxShadow:
                     novedadesItems.length + recordatoriosActivos.length > 0
                       ? "0 0 0 3px rgba(200,146,42,.18)"
                       : "none",
                 }}
               >
-                {showNovedades ? "▲" : "▼"}&nbsp;Novedades de la semana
-                {novedadesItems.length + recordatoriosActivos.length > 0 && (
-                  <span
-                    style={{
-                      background: showNovedades ? "var(--vd)" : "var(--do)",
-                      color: showNovedades ? "var(--do)" : "var(--vd)",
-                      fontFamily: "var(--mono)",
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      borderRadius: "10px",
-                      padding: "2px 7px",
-                      minWidth: "18px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {novedadesItems.length + recordatoriosActivos.length}
-                  </span>
-                )}
-                {novedadesItems.length + recordatoriosActivos.length === 0 && (
-                  <span
-                    style={{
-                      fontFamily: "var(--mono)",
-                      fontSize: "10px",
-                      color: "var(--tx3)",
-                    }}
-                  >
-                    Sin pendientes ✓
-                  </span>
-                )}
+                Novedades de la semana
+                <span style={{ fontSize: "16px", lineHeight: 1 }}>
+                  {novedadesItems.length + recordatoriosActivos.length > 0 ? "❗" : "✓"}
+                </span>
               </button>
               <button
                 onClick={() => {
@@ -7647,6 +7641,7 @@
 
             {/* TOOLBAR */}
             <div
+              className="agenda-toolbar"
               style={{
                 display: "flex",
                 alignItems: "center",
