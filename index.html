@@ -3469,35 +3469,36 @@
               )}
               <div className="modal-body">
                 {/* ─── 0. PACIENTE ─── */}
-                <div className="acc-row" style={{ border: "2px solid rgba(200,146,42,.75)" }}>
-                  <div className="acc-head" onClick={() => !isEditar && toggleSec("paciente")} style={{ cursor: isEditar ? "default" : "pointer" }}>
-                    <span style={{ fontFamily:"var(--serif)", fontSize:"16px", fontWeight:700, color:"var(--do)", letterSpacing:".01em" }}>{busq || "— Sin seleccionar —"}</span>
-                    {!isEditar && <span className="acc-arrow" style={{ marginLeft:"auto" }}>{openSection === "paciente" ? "▴" : "▾"}</span>}
+                <div className="acc-row" style={{ border:"2px solid rgba(200,146,42,.75)", overflow:"visible", position:"relative" }}>
+                  <div className="acc-head" style={{ cursor: isEditar ? "default" : "pointer" }}
+                       onClick={() => !isEditar && openSection !== "paciente" && toggleSec("paciente")}>
+                    {!isEditar && openSection === "paciente" ? (
+                      <input
+                        style={{ flex:1, background:"transparent", border:"none", outline:"none",
+                                 fontFamily:"var(--serif)", fontSize:"16px", fontWeight:700,
+                                 color:"var(--do)", width:"100%", padding:0, letterSpacing:".01em" }}
+                        placeholder="Buscar por nombre o DNI..."
+                        value={busq}
+                        onChange={(e) => handleBusq(e.target.value)}
+                        onFocus={() => busq.length >= 2 && setShowSugs(true)}
+                        onBlur={() => setTimeout(() => { setShowSugs(false); setOpenSection(null); }, 180)}
+                        autoFocus
+                      />
+                    ) : (
+                      <span style={{ fontFamily:"var(--serif)", fontSize:"16px", fontWeight:700, color:"var(--do)", letterSpacing:".01em", flex:1 }}>
+                        {busq || "— Sin seleccionar —"}
+                      </span>
+                    )}
+                    {!isEditar && <span className="acc-arrow" style={{ marginLeft:"auto" }} onClick={(e) => { e.stopPropagation(); toggleSec("paciente"); }}>{openSection === "paciente" ? "▴" : "▾"}</span>}
                   </div>
-                  {!isEditar && openSection === "paciente" && (
-                    <div className="acc-body">
-                      <div style={{ position: "relative" }}>
-                        <input
-                          className="modal-input"
-                          style={{ marginBottom: 0 }}
-                          placeholder="Buscar por nombre o DNI..."
-                          value={busq}
-                          onChange={(e) => handleBusq(e.target.value)}
-                          onFocus={() => busq.length >= 2 && setShowSugs(true)}
-                          onBlur={() => setTimeout(() => setShowSugs(false), 180)}
-                          autoFocus
-                        />
-                        {showSugs && (
-                          <div className="pac-sugs">
-                            {sugs.map((p) => (
-                              <div key={p.id} className="pac-sug-item" onMouseDown={() => { selectPac(p); setOpenSection(null); }}>
-                                <span className="pac-sug-nombre">{p.nombre} {p.apellido}</span>
-                                <span className="pac-sug-dni">DNI {p.dni}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                  {!isEditar && showSugs && sugs.length > 0 && (
+                    <div className="pac-sugs" style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:500 }}>
+                      {sugs.map((p) => (
+                        <div key={p.id} className="pac-sug-item" onMouseDown={() => { selectPac(p); setOpenSection(null); }}>
+                          <span className="pac-sug-nombre">{p.nombre} {p.apellido}</span>
+                          <span className="pac-sug-dni">DNI {p.dni}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
