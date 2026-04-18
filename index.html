@@ -559,29 +559,38 @@
       }
       .mt-always-row .modal-input { padding: 7px 10px; margin-bottom: 0; border: 2px solid var(--do); background: rgba(200,146,42,.08); }
       /* ── ACORDEÓN ── */
-      .acc-row { border-bottom: 1px solid rgba(255,255,255,.07); }
-      .acc-row:last-of-type { border-bottom: none; }
+      .acc-row {
+        border: 1.5px solid rgba(200,146,42,.28); border-radius: 12px;
+        margin-bottom: 5px; background: rgba(255,255,255,.025);
+        overflow: hidden; transition: border-color .15s;
+      }
+      .acc-row:hover { border-color: rgba(200,146,42,.52); }
+      .acc-row:last-of-type { margin-bottom: 0; }
       .acc-head {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 11px 4px; cursor: pointer; user-select: none;
-        border-radius: 8px; transition: background .15s;
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 14px; cursor: pointer; user-select: none;
+        transition: background .15s;
       }
       .acc-head:hover { background: rgba(255,255,255,.04); }
-      .acc-label-col { display: flex; flex-direction: row; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+      .acc-chk {
+        width: 17px; height: 17px; flex-shrink: 0; border-radius: 4px;
+        border: 2px solid rgba(200,146,42,.45); background: transparent;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: 900; color: transparent; transition: all .15s;
+      }
+      .acc-chk.on { background: var(--do); border-color: var(--do); color: var(--vd); }
       .acc-label {
-        font-family: var(--sans); font-size: 13px; font-weight: 600;
-        color: rgba(255,255,255,.88); white-space: nowrap;
+        font-family: var(--mono); font-size: 11px; font-weight: 500;
+        color: rgba(255,255,255,.82); text-transform: uppercase;
+        letter-spacing: .07em; white-space: nowrap;
       }
       .acc-value {
-        font-family: var(--mono); font-size: 12px;
-        color: var(--do); flex: 1; text-align: right;
+        font-family: var(--mono); font-size: 12px; color: var(--do);
+        flex: 1; text-align: right; margin-right: 2px;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
-      .acc-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; margin-left: 8px; }
-      .acc-check-done { color: #7DCC90; font-size: 14px; font-weight: 700; }
-      .acc-check-pend { color: rgba(255,255,255,.18); font-size: 14px; }
-      .acc-arrow { color: rgba(255,255,255,.3); font-size: 10px; }
-      .acc-body { padding: 2px 0 14px 0; }
+      .acc-arrow { color: rgba(255,255,255,.28); font-size: 10px; flex-shrink: 0; }
+      .acc-body { padding: 0 14px 14px 14px; }
       .modal-label {
         font-family: var(--serif2);
         font-size: 10px;
@@ -3462,14 +3471,10 @@
                 {/* ─── 0. PACIENTE ─── */}
                 <div className="acc-row">
                   <div className="acc-head" onClick={() => !isEditar && toggleSec("paciente")} style={{ cursor: isEditar ? "default" : "pointer" }}>
-                    <div className="acc-label-col">
-                      <span className="acc-label">Paciente</span>
-                      <span className="acc-value">{busq || "Sin seleccionar"}</span>
-                    </div>
-                    <div className="acc-right">
-                      <span className={busq ? "acc-check-done" : "acc-check-pend"}>{busq ? "✓" : "○"}</span>
-                      {!isEditar && <span className="acc-arrow">{openSection === "paciente" ? "▴" : "▾"}</span>}
-                    </div>
+                    <span className={`acc-chk${busq ? " on" : ""}`}>✓</span>
+                    <span className="acc-label">Paciente</span>
+                    <span className="acc-value">{busq || "Sin seleccionar"}</span>
+                    {!isEditar && <span className="acc-arrow">{openSection === "paciente" ? "▴" : "▾"}</span>}
                   </div>
                   {!isEditar && openSection === "paciente" && (
                     <div className="acc-body">
@@ -3528,17 +3533,13 @@
                 {/* ─── 1. TIPO DE SESIÓN ─── */}
                 <div className="acc-row">
                   <div className="acc-head" onClick={() => toggleSec("tipo")}>
-                    <div className="acc-label-col">
-                      <span className="acc-label">Tipo de sesión</span>
-                      <span className="acc-value">
-                        {tipoInfo.l}
-                        {f.colorLabel && (() => { const c = PALETA_COLORES.find((p) => p.id === f.colorLabel); return c ? <span style={{ display:"inline-block", width:"8px", height:"8px", borderRadius:"50%", background:c.bg, marginLeft:"6px", verticalAlign:"middle" }} /> : null; })()}
-                      </span>
-                    </div>
-                    <div className="acc-right">
-                      <span className="acc-check-done">✓</span>
-                      <span className="acc-arrow">{openSection === "tipo" ? "▴" : "▾"}</span>
-                    </div>
+                    <span className="acc-chk on">✓</span>
+                    <span className="acc-label">Tipo de sesión</span>
+                    <span className="acc-value">
+                      {tipoInfo.l}
+                      {f.colorLabel && (() => { const c = PALETA_COLORES.find((p) => p.id === f.colorLabel); return c ? <span style={{ display:"inline-block", width:"8px", height:"8px", borderRadius:"50%", background:c.bg, marginLeft:"6px", verticalAlign:"middle" }} /> : null; })()}
+                    </span>
+                    <span className="acc-arrow">{openSection === "tipo" ? "▴" : "▾"}</span>
                   </div>
                   {openSection === "tipo" && (
                     <div className="acc-body">
@@ -3560,14 +3561,10 @@
                 {isEditar && (
                   <div className="acc-row">
                     <div className="acc-head" onClick={() => toggleSec("estado")}>
-                      <div className="acc-label-col">
-                        <span className="acc-label">Estado</span>
-                        <span className="acc-value">{ESTADOS.find((e) => e.v === f.estado)?.l || "⏳ Pendiente"}</span>
-                      </div>
-                      <div className="acc-right">
-                        <span className={estadoCompleto ? "acc-check-done" : "acc-check-pend"}>{estadoCompleto ? "✓" : "○"}</span>
-                        <span className="acc-arrow">{openSection === "estado" ? "▴" : "▾"}</span>
-                      </div>
+                      <span className={`acc-chk${estadoCompleto ? " on" : ""}`}>✓</span>
+                      <span className="acc-label">Estado</span>
+                      <span className="acc-value">{ESTADOS.find((e) => e.v === f.estado)?.l || "⏳ Pendiente"}</span>
+                      <span className="acc-arrow">{openSection === "estado" ? "▴" : "▾"}</span>
                     </div>
                     {openSection === "estado" && (
                       <div className="acc-body">
@@ -3585,14 +3582,10 @@
                 {f.tipo !== "AT" && (
                   <div className="acc-row">
                     <div className="acc-head" onClick={() => toggleSec("cobro")}>
-                      <div className="acc-label-col">
-                        <span className="acc-label">Forma de cobro</span>
-                        <span className="acc-value">{cobroResumen}</span>
-                      </div>
-                      <div className="acc-right">
-                        <span className={cobroCmpleto ? "acc-check-done" : "acc-check-pend"}>{cobroCmpleto ? "✓" : "○"}</span>
-                        <span className="acc-arrow">{openSection === "cobro" ? "▴" : "▾"}</span>
-                      </div>
+                      <span className={`acc-chk${cobroCmpleto ? " on" : ""}`}>✓</span>
+                      <span className="acc-label">Forma de cobro</span>
+                      <span className="acc-value">{cobroResumen}</span>
+                      <span className="acc-arrow">{openSection === "cobro" ? "▴" : "▾"}</span>
                     </div>
                     {openSection === "cobro" && (
                       <div className="acc-body">
@@ -3689,16 +3682,12 @@
 
 
                 {/* ─── 5. NOTAS Y COMENTARIOS ─── */}
-                <div className="acc-row" style={{ borderBottom:"none" }}>
+                <div className="acc-row">
                   <div className="acc-head" onClick={() => toggleSec("notas")}>
-                    <div className="acc-label-col">
-                      <span className="acc-label">Notas y comentarios</span>
-                      <span className="acc-value">{notasResumen}</span>
-                    </div>
-                    <div className="acc-right">
-                      <span className="acc-check-done">✓</span>
-                      <span className="acc-arrow">{openSection === "notas" ? "▴" : "▾"}</span>
-                    </div>
+                    <span className="acc-chk on">✓</span>
+                    <span className="acc-label">Notas y comentarios</span>
+                    <span className="acc-value">{notasResumen}</span>
+                    <span className="acc-arrow">{openSection === "notas" ? "▴" : "▾"}</span>
                   </div>
                   {openSection === "notas" && (
                     <div className="acc-body">
@@ -3708,12 +3697,12 @@
                           const tieneContenido = !!(t.key === "clinica" ? f.evolucionClinica : t.key === "admin" ? f.notasAdmin : f.notasAsistencia);
                           const alertaActiva = !!(f.notasAlertas?.[t.key]);
                           return (
-                            <button key={t.key} onClick={() => setNotasTab(t.key)} style={{ flex:1, padding:"8px 10px", borderRadius:"50px", border:activo ? "2px solid var(--do)" : "2px solid rgba(200,146,42,.35)", cursor:"pointer", fontFamily:"var(--sans)", fontSize:"13px", fontWeight:activo ? 800 : 600, background:activo ? "var(--vm)" : "transparent", color:activo ? "#fff" : "rgba(255,255,255,0.6)", transition:"all .25s ease", position:"relative", display:"flex", alignItems:"center", justifyContent:"center", gap:"5px", boxShadow:activo ? "0 4px 10px rgba(0,0,0,0.25)" : "none" }}>
-                              <span style={{ fontSize:"14px" }}>{t.label.split(" ")[0]}</span>
-                              <span>{t.label.split(" ")[1]}</span>
-                              {tieneContenido && !activo && <span style={{ position:"absolute", top:"4px", right:"28px", width:"6px", height:"6px", borderRadius:"50%", background:"var(--do)", boxShadow:"0 0 6px var(--do)" }} />}
-                              <span style={{ fontSize:"10px", color:alertaActiva ? "var(--do)" : "rgba(255,255,255,.35)" }}>⚠</span>
-                              <div onClick={(e) => { e.stopPropagation(); upd("notasAlertas", { ...(f.notasAlertas || {}), [t.key]: !alertaActiva }); }} title={alertaActiva ? "Quitar alerta" : "Marcar como alerta"} style={{ width:"14px", height:"14px", borderRadius:"3px", border:`2px solid ${alertaActiva ? "var(--do)" : "rgba(200,146,42,.4)"}`, background:alertaActiva ? "var(--do)" : "transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:"9px", color:"var(--vd)", fontWeight:900 }}>{alertaActiva ? "✓" : ""}</div>
+                            <button key={t.key} onClick={() => setNotasTab(t.key)} style={{ flex:1, padding:"7px 10px", borderRadius:"50px", border:activo ? "2px solid var(--do)" : "2px solid rgba(200,146,42,.3)", cursor:"pointer", fontFamily:"var(--sans)", fontSize:"12px", fontWeight:activo ? 700 : 500, background:activo ? "var(--vm)" : "rgba(255,255,255,.03)", color:activo ? "#fff" : "rgba(255,255,255,0.55)", transition:"all .2s ease", display:"flex", alignItems:"center", justifyContent:"center", gap:"5px", boxShadow:activo ? "0 3px 8px rgba(0,0,0,0.3)" : "none" }}>
+                              <span style={{ fontSize:"13px", lineHeight:1 }}>{t.label.split(" ")[0]}</span>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:"11px", textTransform:"uppercase", letterSpacing:".04em" }}>{t.label.split(" ")[1]}</span>
+                              {tieneContenido && !activo && <span style={{ width:"5px", height:"5px", borderRadius:"50%", background:"var(--do)", boxShadow:"0 0 5px var(--do)", flexShrink:0 }} />}
+                              <span style={{ fontSize:"10px", color:alertaActiva ? "#F0C860" : "rgba(255,255,255,.25)", lineHeight:1 }}>△</span>
+                              <div onClick={(e) => { e.stopPropagation(); upd("notasAlertas", { ...(f.notasAlertas || {}), [t.key]: !alertaActiva }); }} title={alertaActiva ? "Quitar alerta" : "Marcar alerta"} style={{ width:"16px", height:"16px", borderRadius:"4px", border:`2px solid ${alertaActiva ? "var(--do)" : "rgba(200,146,42,.4)"}`, background:alertaActiva ? "var(--do)" : "transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:"10px", color:"var(--vd)", fontWeight:900, transition:"all .15s" }}>{alertaActiva ? "✓" : ""}</div>
                             </button>
                           );
                         })}
@@ -3728,16 +3717,12 @@
 
                 {/* ─── 6. OBJETIVOS DE LA SEMANA ─── */}
                 {isEditar && tieneObjetivos && (
-                  <div className="acc-row" style={{ borderBottom: "none" }}>
+                  <div className="acc-row">
                     <div className="acc-head" onClick={() => toggleSec("objetivos")}>
-                      <div className="acc-label-col">
-                        <span className="acc-label">🎯 Objetivos</span>
-                        <span className="acc-value">{calificResumen}</span>
-                      </div>
-                      <div className="acc-right">
-                        <span className={calificCmpleto ? "acc-check-done" : "acc-check-pend"}>{calificCmpleto ? "✓" : "○"}</span>
-                        <span className="acc-arrow">{openSection === "objetivos" ? "▴" : "▾"}</span>
-                      </div>
+                      <span className={`acc-chk${calificCmpleto ? " on" : ""}`}>✓</span>
+                      <span className="acc-label">🎯 Objetivos</span>
+                      <span className="acc-value">{calificResumen}</span>
+                      <span className="acc-arrow">{openSection === "objetivos" ? "▴" : "▾"}</span>
                     </div>
                     {openSection === "objetivos" && (
                       <div className="acc-body">
