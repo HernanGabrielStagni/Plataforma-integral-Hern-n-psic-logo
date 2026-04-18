@@ -4331,6 +4331,7 @@
         });
         const [showOrdenes, setShowOrdenes] = useState(false);
         const [showNovedades, setShowNovedades] = useState(false);
+        const [showStats, setShowStats] = useState(() => window.innerWidth >= 768);
         const [showCoord, setShowCoord] = useState(false);
         const [coordPendientes, setCoordPendientes] = useState([]);
         const [objetivosSemana, setObjetivosSemana] = useState([]);
@@ -5092,9 +5093,14 @@
             </div>
 
             {/* RESUMEN SEMANAL */}
-            <div style={{ fontFamily:"var(--serif)", fontSize:"15px", fontWeight:700, color:"var(--tx)", marginBottom:"10px" }}>
-              Resumen semanal
+            <div
+              onClick={() => setShowStats(v => !v)}
+              style={{ fontFamily:"var(--serif)", fontSize:"15px", fontWeight:700, color:"var(--tx)", marginBottom:"10px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", userSelect:"none" }}
+            >
+              <span>Resumen semanal</span>
+              <span style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"var(--tx3)", fontWeight:400 }}>{showStats ? "▲ ocultar" : "▼ mostrar"}</span>
             </div>
+            {showStats && (<>
             <div className="totales-cobro">
               <div className="total-item cobrado">
                 <div className="total-item-label">Cobrado esta semana</div>
@@ -5220,6 +5226,7 @@
                 })}
               </div>
             )}
+            </>)}
 
             {/* BOTÓN NOVEDADES DE LA SEMANA */}
             <div style={{ margin: "14px 0 0" }}>
@@ -6054,7 +6061,7 @@
                     <div style={{ display:"flex", gap:"10px", justifyContent:"flex-end" }}>
                       <button className="btn btn-sec" onClick={() => setModalConfirmActivar(false)}>Cancelar</button>
                       <button className="btn btn-g" onClick={() => { setModalConfirmActivar(false); activarSemana(); }}>
-                        🗓️ Confirmar activación
+                        ✓ Confirmar
                       </button>
                     </div>
                   </div>
