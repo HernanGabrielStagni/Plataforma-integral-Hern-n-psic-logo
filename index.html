@@ -843,6 +843,9 @@
       .total-item-valor { font-family:var(--serif); font-size:26px; font-weight:700; color:var(--vd); }
       /* ── AGENDA ACCIONES ── */
       .agenda-acciones { display:flex; gap:8px; align-items:center; margin-left:auto; flex-wrap:wrap; }
+      /* ── PANEL OBJETIVOS ── */
+      .obj-panel-view { display:flex; align-items:flex-start; gap:24px; }
+      .obj-edit-actions { display:flex; gap:8px; margin-top:12px; }
       /* ── BREADCRUMB MOBILE ── */
       .topbar-breadcrumb { display:none; }
 
@@ -891,31 +894,35 @@
         }
 
         .topbar-brand {
-          display: none;
+          flex: 1;
         }
         .topbar-cta {
           display: none;
         }
         .topbar-center {
-          position: static;
-          transform: none;
-          margin: 0 auto;
+          display: none;
         }
         .topbar {
           position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-          height: auto; flex-wrap: wrap; justify-content: space-between;
+          height: auto; flex-wrap: wrap; align-items: center;
+          padding: 0 14px;
         }
         .topbar-breadcrumb {
-          display: flex; align-items: center; width: 100%;
-          padding: 5px 16px; font-family: var(--sans); font-size: 12px;
-          font-weight: 600; color: rgba(255,255,255,.7);
+          display: flex; align-items: center; gap: 8px; width: 100%;
+          padding: 6px 0 8px; font-family: var(--sans); font-size: 13px;
+          font-weight: 700; color: rgba(255,255,255,.88);
           border-top: 1px solid rgba(200,146,42,.22);
         }
         .app-layout {
           flex-direction: column;
-          margin-top: 90px;
-          min-height: calc(100vh - 90px - 60px);
+          margin-top: 100px;
+          min-height: calc(100vh - 100px - 60px);
         }
+        /* BUG 1 — Objetivos responsive */
+        .obj-panel-view { flex-direction: column !important; gap: 12px !important; }
+        .obj-panel-view button[style] { width: 100% !important; box-sizing: border-box; }
+        .obj-edit-actions { flex-direction: column; }
+        .obj-edit-actions .btn { width: 100%; text-align: center; justify-content: center; }
         .main-content { padding: 16px 14px 80px; }
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
         .totales-cobro { grid-template-columns: 1fr; }
@@ -1392,7 +1399,16 @@
         line-height: 1.1;
       }
       .ag-day-hd.today .ag-day-num {
-        color: var(--do);
+        color: #fff;
+        background: var(--vd);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        box-shadow: 0 0 0 2px var(--do);
       }
       .ag-day-abbr {
         font-family: var(--mono);
@@ -2038,7 +2054,7 @@
             <button className="topbar-cta" onClick={() => onNavigate("agenda")}>
               + Nuevo turno
             </button>
-            <div className="topbar-breadcrumb">📍 {centerLabel}</div>
+            <div className="topbar-breadcrumb">{centerLabel}</div>
           </div>
         );
       }
@@ -4774,13 +4790,7 @@
               />
 
               {!editandoObj ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "24px",
-                  }}
-                >
+                <div className="obj-panel-view">
                   <div style={{ flexShrink: 0 }}>
                     <div
                       style={{
@@ -5077,9 +5087,7 @@
                       />
                     </div>
                   ))}
-                  <div
-                    style={{ display: "flex", gap: "8px", marginTop: "12px" }}
-                  >
+                  <div className="obj-edit-actions">
                     <button
                       className="btn btn-sec"
                       onClick={() => setEditandoObj(false)}
