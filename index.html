@@ -824,10 +824,27 @@
       /* ── STATS GRID ── */
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 12px;
-        margin-bottom: 24px;
+        margin-bottom: 0;
       }
+      /* ── TOTALES COBRO ── */
+      .totales-cobro {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+      }
+      .total-item {
+        background: #FAF7F2; border: 2px solid #B8B0A0; border-radius: var(--r);
+        padding: 14px 18px; position: relative; overflow: hidden;
+      }
+      .total-item::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; }
+      .total-item.cobrado::before { background: linear-gradient(90deg, var(--vm), #4A7C5F); }
+      .total-item.pendiente::before { background: linear-gradient(90deg, var(--do), #E8B84B); }
+      .total-item-label { font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--tx3); margin-bottom:4px; }
+      .total-item-valor { font-family:var(--serif); font-size:26px; font-weight:700; color:var(--vd); }
+      /* ── AGENDA ACCIONES ── */
+      .agenda-acciones { display:flex; gap:8px; align-items:center; margin-left:auto; flex-wrap:wrap; }
+      /* ── BREADCRUMB MOBILE ── */
+      .topbar-breadcrumb { display:none; }
 
       /* ══════════════════════════════════════════ */
       /* RESPONSIVE < 768px                        */
@@ -885,18 +902,26 @@
           margin: 0 auto;
         }
         .topbar {
-          justify-content: center;
+          position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+          height: auto; flex-wrap: wrap; justify-content: space-between;
         }
-
+        .topbar-breadcrumb {
+          display: flex; align-items: center; width: 100%;
+          padding: 5px 16px; font-family: var(--sans); font-size: 12px;
+          font-weight: 600; color: rgba(255,255,255,.7);
+          border-top: 1px solid rgba(200,146,42,.22);
+        }
         .app-layout {
           flex-direction: column;
-          min-height: calc(100vh - 64px - 60px);
+          margin-top: 90px;
+          min-height: calc(100vh - 90px - 60px);
         }
-        .main-content {
-          padding: 18px 14px 80px;
-        }
-        .stats-grid {
-          grid-template-columns: repeat(2, 1fr);
+        .main-content { padding: 16px 14px 80px; }
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .totales-cobro { grid-template-columns: 1fr; }
+        .agenda-acciones { flex-direction: column; margin-left: 0; width: 100%; }
+        .agenda-acciones .btn, .agenda-acciones > button, .agenda-acciones > span {
+          width: 100%; justify-content: center; text-align: center;
         }
         .card {
           border-left-width: 3px;
@@ -2013,6 +2038,7 @@
             <button className="topbar-cta" onClick={() => onNavigate("agenda")}>
               + Nuevo turno
             </button>
+            <div className="topbar-breadcrumb">📍 {centerLabel}</div>
           </div>
         );
       }
@@ -4247,6 +4273,7 @@
         const [modalTurno, setModalTurno] = useState(null);
         const [modalEliminar, setModalEliminar] = useState(null);
         const [modalReserva, setModalReserva] = useState(null);
+        const [modalConfirmActivar, setModalConfirmActivar] = useState(false);
         const [extraFeriados, setExtraFeriados] = useState([]);
         const [showFeriadoPanel, setShowFeriadoPanel] = useState(false);
         const [newFeriado, setNewFeriado] = useState({
@@ -5067,19 +5094,25 @@
               )}
             </div>
 
+            {/* RESUMEN SEMANAL */}
+            <div style={{ fontFamily:"var(--serif)", fontSize:"15px", fontWeight:700, color:"var(--tx)", marginBottom:"10px" }}>
+              Resumen semanal
+            </div>
+            <div className="totales-cobro">
+              <div className="total-item cobrado">
+                <div className="total-item-label">Cobrado esta semana</div>
+                <div className="total-item-valor">${cobradoSem.toLocaleString("es-AR")}</div>
+              </div>
+              <div className="total-item pendiente">
+                <div className="total-item-label">Pendiente de cobro</div>
+                <div className="total-item-valor">${pendienteSem.toLocaleString("es-AR")}</div>
+              </div>
+            </div>
             {/* STATS */}
-            <div className="stats-grid">
+            <div className="stats-grid" style={{ marginBottom:"24px" }}>
               <StatCard
                 label="Sesiones esta semana"
                 value={weekSes.filter((s) => s.tipo !== "AT").length}
-              />
-              <StatCard
-                label="Cobrado semana"
-                value={`$${cobradoSem.toLocaleString("es-AR")}`}
-              />
-              <StatCard
-                label="Pendiente a cobrar"
-                value={`$${pendienteSem.toLocaleString("es-AR")}`}
               />
               <StatCard label="Sin confirmar" value={pendSem} />
               <StatCard label="Cancelaciones" value={cancelSem} />
@@ -5201,24 +5234,15 @@
                   gap: "8px",
                   padding: "9px 20px",
                   borderRadius: "50px",
-                  border: `2px solid ${novedadesItems.length > 0 ? "var(--do)" : "var(--crb)"}`,
-                  background:
-                    novedadesItems.length > 0
-                      ? showNovedades
-                        ? "var(--do)"
-                        : "rgba(200,146,42,.12)"
-                      : "#FAF7F2",
-                  color:
-                    novedadesItems.length > 0
-                      ? showNovedades
-                        ? "var(--vd)"
-                        : "var(--do)"
-                      : "var(--tx3)",
+                  border: `2px solid ${novedadesItems.length > 0 ? "var(--do)" : "rgba(200,146,42,.45)"}`,
+                  background: showNovedades ? "var(--do)" : "var(--vd)",
+                  color: showNovedades ? "var(--vd)" : "var(--do)",
                   fontFamily: "var(--sans)",
                   fontSize: "13px",
                   fontWeight: 700,
                   cursor: "pointer",
                   transition: "all .2s",
+                  boxShadow: novedadesItems.length > 0 ? "0 0 0 3px rgba(200,146,42,.18)" : "none",
                 }}
               >
                 {showNovedades ? "▲" : "▼"}&nbsp;Novedades de la semana
@@ -5635,152 +5659,87 @@
             )}
 
             {/* TOOLBAR */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                marginBottom: "16px",
-                flexWrap: "wrap",
-              }}
-            >
-              {/* toggle vista */}
-              <div className="tabs-container">
-                <div
-                  className={`tab-item ${vista === "semanal" ? "active" : ""}`}
-                  onClick={() => setVista("semanal")}
-                >
-                  📅 Semanal
-                </div>
-                <div
-                  className={`tab-item ${vista === "mensual" ? "active" : ""}`}
-                  onClick={() => setVista("mensual")}
-                >
-                  🗓️ Mensual
-                </div>
-              </div>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"16px", flexWrap:"wrap" }}>
 
-              {/* nav semana */}
+              {/* Toggle vista (⟲) */}
+              <button
+                onClick={() => setVista(v => v === "semanal" ? "mensual" : "semanal")}
+                style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"7px 14px",
+                         borderRadius:"50px", border:"2px solid var(--vm)", background:"var(--vd)",
+                         color:"var(--bl)", fontFamily:"var(--sans)", fontSize:"13px", fontWeight:700,
+                         cursor:"pointer", transition:"all .2s" }}
+              >
+                <span style={{ display:"inline-block", transition:"transform .35s", transform: vista === "mensual" ? "rotate(180deg)" : "rotate(0deg)", fontSize:"15px", lineHeight:1 }}>⟲</span>
+                {vista === "semanal" ? "📅 Semanal" : "🗓️ Mensual"}
+              </button>
+
+              {/* Nav semana */}
               {vista === "semanal" && (
                 <>
-                  <button className="btn btn-sec" onClick={prevWeek}>
-                    ← Anterior
-                  </button>
-                  <button className="btn btn-p" onClick={goHoy}>
-                    Hoy
-                  </button>
-                  <button className="btn btn-sec" onClick={nextWeek}>
-                    Siguiente →
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => setShowWeekend((v) => !v)}
-                    style={{
-                      borderRadius: "50px",
-                      padding: "7px 14px",
-                      fontFamily: "var(--sans)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      border: showWeekend
-                        ? "2px solid var(--do)"
-                        : "2px solid var(--crb)",
-                      background: showWeekend
-                        ? "rgba(200,146,42,.12)"
-                        : "transparent",
-                      color: showWeekend ? "var(--do)" : "var(--tx2)",
-                      cursor: "pointer",
-                      transition: "all .18s",
-                    }}
-                    title={
-                      showWeekend
-                        ? "Ocultar fin de semana"
-                        : "Mostrar fin de semana"
-                    }
-                  >
+                  {/* ‹ Hoy › */}
+                  <div style={{ display:"inline-flex", alignItems:"center", borderRadius:"50px", border:"2px solid var(--crb)", overflow:"hidden", background:"#FAF7F2" }}>
+                    <button onClick={prevWeek} title="Semana anterior"
+                      style={{ padding:"7px 13px", background:"transparent", border:"none", cursor:"pointer", fontWeight:900, fontSize:"18px", color:"var(--vd)", lineHeight:1, fontFamily:"sans-serif" }}>‹</button>
+                    <button onClick={goHoy} title="Ir a hoy"
+                      style={{ padding:"7px 10px", background:"transparent", border:"none", borderLeft:"1px solid var(--crb)", borderRight:"1px solid var(--crb)", cursor:"pointer", fontFamily:"var(--sans)", fontWeight:700, fontSize:"12px", color:"var(--tx2)" }}>Hoy</button>
+                    <button onClick={nextWeek} title="Semana siguiente"
+                      style={{ padding:"7px 13px", background:"transparent", border:"none", cursor:"pointer", fontWeight:900, fontSize:"18px", color:"var(--vd)", lineHeight:1, fontFamily:"sans-serif" }}>›</button>
+                  </div>
+
+                  {/* Fin de semana toggle */}
+                  <button onClick={() => setShowWeekend(v => !v)}
+                    style={{ borderRadius:"50px", padding:"7px 14px", fontFamily:"var(--sans)", fontWeight:600, fontSize:"13px",
+                             border: showWeekend ? "2px solid var(--do)" : "2px solid var(--crb)",
+                             background: showWeekend ? "rgba(200,146,42,.12)" : "transparent",
+                             color: showWeekend ? "var(--do)" : "var(--tx2)", cursor:"pointer", transition:"all .18s" }}
+                    title={showWeekend ? "Ocultar fin de semana" : "Mostrar fin de semana"}>
                     {showWeekend ? "📅 Fin de semana ✓" : "📅 Fin de semana"}
                   </button>
-                  <span
-                    style={{
-                      fontFamily: "var(--mono)",
-                      fontSize: "12px",
-                      color: "var(--tx2)",
-                    }}
-                  >
-                    {weekLabel}
+
+                  {/* Rango fecha — mes en dorado/negrita */}
+                  <span style={{ fontFamily:"var(--mono)", fontSize:"12px", color:"var(--tx2)" }}>
+                    {(() => {
+                      const meses = /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/i;
+                      const parts = weekLabel.split(meses);
+                      return parts.map((p, i) =>
+                        meses.test(p)
+                          ? <strong key={i} style={{ color:"var(--do)", fontWeight:800, fontSize:"13px", textTransform:"uppercase" }}>{p}</strong>
+                          : p
+                      );
+                    })()}
                   </span>
-                  {semanaActivada ? (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "6px 14px",
-                        borderRadius: "50px",
-                        border: "2px solid rgba(125,204,144,.35)",
-                        background: "rgba(125,204,144,.08)",
-                        fontFamily: "var(--mono)",
-                        fontSize: "11px",
-                        color: "#7DCC90",
-                        fontWeight: 700,
-                      }}
-                    >
+                </>
+              )}
+
+              {/* Botones de acción — responsive con .agenda-acciones */}
+              <div className="agenda-acciones">
+                {vista === "semanal" && (
+                  semanaActivada ? (
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:"5px", padding:"6px 14px",
+                                   borderRadius:"50px", border:"2px solid rgba(125,204,144,.35)",
+                                   background:"rgba(125,204,144,.08)", fontFamily:"var(--mono)",
+                                   fontSize:"11px", color:"#7DCC90", fontWeight:700 }}>
                       ✓ Semana activada
                     </span>
                   ) : (
-                    <button
-                      className="btn btn-g"
-                      onClick={activarSemana}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
+                    <button className="btn btn-g" onClick={() => setModalConfirmActivar(true)}
+                      style={{ display:"inline-flex", alignItems:"center", gap:"6px" }}>
                       🗓️ Activar semana
                       {coordSemana.length > 0 && (
-                        <span
-                          style={{
-                            background: "var(--vd)",
-                            color: "var(--do)",
-                            fontFamily: "var(--mono)",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            borderRadius: "10px",
-                            padding: "1px 6px",
-                          }}
-                        >
+                        <span style={{ background:"var(--vd)", color:"var(--do)", fontFamily:"var(--mono)",
+                                       fontSize:"10px", fontWeight:700, borderRadius:"10px", padding:"1px 6px" }}>
                           {coordSemana.length}
                         </span>
                       )}
                     </button>
-                  )}
-                </>
-              )}
-
-              <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
-                <button
-                  className="btn btn-sec"
-                  onClick={() =>
-                    setModalReserva({
-                      reserva: null,
-                      fecha: hoyStr,
-                      hora: "10:00",
-                    })
-                  }
-                >
+                  )
+                )}
+                <button className="btn btn-sec"
+                  onClick={() => setModalReserva({ reserva:null, fecha:hoyStr, hora:"10:00" })}>
                   🔒 Reservar horario
                 </button>
-                <button
-                  className="btn btn-g"
-                  onClick={() =>
-                    setModalTurno({
-                      mode: "nuevo",
-                      sesion: null,
-                      fecha: hoyStr,
-                      hora: "10:00",
-                    })
-                  }
-                >
+                <button className="btn btn-g"
+                  onClick={() => setModalTurno({ mode:"nuevo", sesion:null, fecha:hoyStr, hora:"10:00" })}>
                   + Nuevo turno
                 </button>
               </div>
@@ -6076,6 +6035,35 @@
                 onClose={() => setModalEliminar(null)}
                 onConfirm={() => deleteSesion(modalEliminar.id)}
               />
+            )}
+
+            {/* MODAL CONFIRMAR ACTIVAR SEMANA */}
+            {modalConfirmActivar && ReactDOM.createPortal(
+              <div className="modal-overlay" onClick={() => setModalConfirmActivar(false)}>
+                <div className="modal-card" style={{ maxWidth:"420px" }} onClick={e => e.stopPropagation()}>
+                  <div style={{ height:"4px", background:"linear-gradient(90deg,var(--do),#E8B84B)", borderRadius:"var(--r) var(--r) 0 0" }} />
+                  <div className="modal-header">
+                    <span className="modal-title">Activar semana</span>
+                    <button className="modal-icon-btn" onClick={() => setModalConfirmActivar(false)}>✕</button>
+                  </div>
+                  <div style={{ padding:"20px 24px 24px" }}>
+                    <div style={{ background:"rgba(200,146,42,.1)", border:"2px solid rgba(200,146,42,.35)", borderRadius:"12px", padding:"14px 16px", marginBottom:"20px" }}>
+                      <div style={{ fontFamily:"var(--serif)", fontSize:"14px", color:"var(--do)", fontWeight:700, marginBottom:"8px" }}>⚠️ Atención</div>
+                      <div style={{ fontFamily:"var(--sans)", fontSize:"13px", color:"rgba(255,255,255,.82)", lineHeight:1.6 }}>
+                        Esta acción cargará los turnos de <strong style={{ color:"var(--do)" }}>pacientes fijos y activos</strong> de la semana.<br/>
+                        Puede <strong style={{ color:"var(--do)" }}>sobrescribir</strong> turnos cargados manualmente si coinciden en fecha y horario.
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:"10px", justifyContent:"flex-end" }}>
+                      <button className="btn btn-sec" onClick={() => setModalConfirmActivar(false)}>Cancelar</button>
+                      <button className="btn btn-g" onClick={() => { setModalConfirmActivar(false); activarSemana(); }}>
+                        🗓️ Confirmar activación
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>,
+              document.body
             )}
 
             {/* MODAL RESERVA PERSONAL */}
