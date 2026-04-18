@@ -939,6 +939,13 @@
         .topbar-cta {
           display: none;
         }
+        .topbar-actions .topbar-cta {
+          display: inline-flex;
+          font-size: 12px;
+          padding: 6px 10px;
+          gap: 4px;
+        }
+        .topbar-actions .topbar-cta span { font-size: 13px !important; }
         .topbar-center {
           display: none;
         }
@@ -4970,9 +4977,6 @@
                     <div style={{ fontFamily:"var(--serif2)", fontSize:"22px", fontWeight:700, color:"var(--do)", lineHeight:1.1, textShadow:"0 1px 4px rgba(0,0,0,.4)" }}>
                       🎯 Objetivos
                     </div>
-                    <div style={{ fontFamily:"var(--mono)", fontSize:"15px", color:"var(--do)", fontWeight:700, marginTop:"4px", letterSpacing:".04em" }}>
-                      {weekLabel}
-                    </div>
                   </div>
                   <span style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"rgba(200,146,42,.5)", fontWeight:400, flexShrink:0 }}>
                     {showObjPanel ? "▲ ocultar" : "▼ mostrar"}
@@ -5279,9 +5283,6 @@
                 <div>
                   <div style={{ fontFamily:"var(--serif2)", fontSize:"22px", fontWeight:700, color:"var(--do)", lineHeight:1.1, textShadow:"0 1px 4px rgba(0,0,0,.4)" }}>
                     📊 Resumen semanal
-                  </div>
-                  <div style={{ fontFamily:"var(--mono)", fontSize:"15px", color:"var(--do)", fontWeight:700, marginTop:"4px", letterSpacing:".04em" }}>
-                    {weekLabel}
                   </div>
                 </div>
                 <span style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"rgba(200,146,42,.5)", fontWeight:400, flexShrink:0 }}>
