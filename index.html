@@ -106,15 +106,26 @@
       /* ── TOPBAR ── */
       .topbar {
         background: var(--vd);
-        height: 64px;
         position: sticky;
         top: 0;
         z-index: 100;
+        display: flex;
+        flex-direction: column;
         border-bottom: 2px solid rgba(200, 146, 42, 0.4);
+      }
+      .topbar-row-1 {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 24px;
+        padding: 10px 24px;
+        border-bottom: 1px solid rgba(200, 146, 42, 0.2);
+      }
+      .topbar-row-2 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 24px;
+        background: rgba(0, 0, 0, 0.05);
       }
 
       .topbar-brand {
@@ -160,16 +171,36 @@
         background: rgba(255, 255, 255, 0.1);
         color: rgba(255, 255, 255, 0.92);
         border-radius: 50px;
-        padding: 8px 20px;
+        padding: 8px 18px;
         font-family: var(--sans);
-        font-weight: 600;
+        font-weight: 700;
         font-size: 13px;
         cursor: pointer;
         transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
       .topbar-cta:hover {
         background: rgba(255, 255, 255, 0.18);
         border-color: rgba(255, 255, 255, 0.4);
+        transform: translateY(-1px);
+      }
+      .topbar-cta.primary {
+        background: var(--do);
+        color: var(--vd);
+        border-color: var(--do);
+        box-shadow: 0 4px 12px rgba(200, 146, 42, 0.3);
+      }
+      .topbar-cta.primary:hover {
+        background: #E8B84B;
+        border-color: #E8B84B;
+        box-shadow: 0 6px 16px rgba(200, 146, 42, 0.45);
+      }
+      .topbar-actions {
+        display: flex;
+        gap: 10px;
+        margin-right: 10px;
       }
 
       /* ── LAYOUT PRINCIPAL ── */
@@ -2060,26 +2091,56 @@
       /* ═══════════════════════════════════════ */
       /* COMPONENTE: Topbar                     */
       /* ═══════════════════════════════════════ */
-      function Topbar({ activeSection, onNavigate }) {
+      function Topbar({ activeSection, onNavigate, onNewTurno, onNewReserva }) {
         const current = NAV_SECTIONS.find((s) => s.id === activeSection);
-        const centerLabel = current ? `${current.emoji} ${current.label}` : "";
 
         return (
           <div className="topbar">
-            <div className="topbar-brand">
-              <div className="topbar-icon">🌱</div>
-              <div>
-                <div className="topbar-title">Plataforma Integral</div>
-                <div className="topbar-subtitle">
-                  Hernán Gabriel Stagni · MP 11919 · v1.0
+            {/* ROW 1: BRAND */}
+            <div className="topbar-row-1">
+              <div className="topbar-brand">
+                <div className="topbar-icon">🌱</div>
+                <div>
+                  <div className="topbar-title">Plataforma Integral</div>
+                  <div className="topbar-subtitle">
+                    Hernán Gabriel Stagni · MP 11919 · v1.0
+                  </div>
                 </div>
               </div>
+              {activeSection !== "agenda" && (
+                <button className="topbar-cta" onClick={() => onNavigate("agenda")}>
+                  + Nuevo turno
+                </button>
+              )}
             </div>
-            <div className="topbar-center">{centerLabel}</div>
-            <button className="topbar-cta" onClick={() => onNavigate("agenda")}>
-              + Nuevo turno
-            </button>
-            <div className="topbar-breadcrumb">{centerLabel}</div>
+
+            {/* ROW 2: SECTION TITLE & ACTIONS */}
+            <div className="topbar-row-2">
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: "28px" }}>{current?.id === "agenda" ? "🗓️" : current?.emoji}</span>
+                <span style={{ 
+                  fontFamily: "var(--sans)", 
+                  fontSize: "26px", 
+                  fontWeight: "700", 
+                  color: "#fff", 
+                  letterSpacing: ".01em",
+                  textShadow: "0 2px 4px rgba(0,0,0,0.3)"
+                }}>
+                  {current?.label}
+                </span>
+              </div>
+
+              {activeSection === "agenda" && (
+                <div className="topbar-actions">
+                  <button className="topbar-cta" onClick={onNewReserva}>
+                    <span style={{ fontSize: "16px" }}>🔔</span> Reservar horario
+                  </button>
+                  <button className="topbar-cta primary" onClick={onNewTurno}>
+                    <span style={{ fontSize: "16px" }}>+</span> Nuevo turno
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         );
       }
@@ -4327,15 +4388,16 @@
       /* ═══════════════════════════════════════ */
       /* SECCIÓN AGENDA (PRINCIPAL)             */
       /* ═══════════════════════════════════════ */
-      function SeccionAgenda() {
+      function SeccionAgenda({ 
+        modalTurno, setModalTurno, 
+        modalReserva, setModalReserva 
+      }) {
         const [vista, setVista] = useState("semanal");
         const [baseDate, setBaseDate] = useState(new Date());
         const [showWeekend, setShowWeekend] = useState(false);
         const [sesiones, setSesiones] = useState([]);
         const [pacientes, setPacientes] = useState([]);
-        const [modalTurno, setModalTurno] = useState(null);
         const [modalEliminar, setModalEliminar] = useState(null);
-        const [modalReserva, setModalReserva] = useState(null);
         const [modalConfirmActivar, setModalConfirmActivar] = useState(false);
         const [extraFeriados, setExtraFeriados] = useState([]);
         const [showFeriadoPanel, setShowFeriadoPanel] = useState(false);
@@ -4346,8 +4408,8 @@
         });
         const [showOrdenes, setShowOrdenes] = useState(false);
         const [showNovedades, setShowNovedades] = useState(false);
-        const [showStats, setShowStats] = useState(() => window.innerWidth >= 768);
-        const [showObjPanel, setShowObjPanel] = useState(() => window.innerWidth >= 768);
+        const [showStats, setShowStats] = useState(false);
+        const [showObjPanel, setShowObjPanel] = useState(false);
         const [showCoord, setShowCoord] = useState(false);
         const [coordPendientes, setCoordPendientes] = useState([]);
         const [objetivosSemana, setObjetivosSemana] = useState([]);
@@ -4871,24 +4933,7 @@
 
         return (
           <div>
-            <div className="page-header" style={{ justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:"14px" }}>
-                <div className="page-header-icon">📅</div>
-                <div className="page-header-title" style={{ fontSize:"39px", fontWeight:700, color:"#fff", letterSpacing:".02em", textShadow:"0 2px 6px rgba(0,0,0,.4)" }}>
-                  AGENDA
-                </div>
-              </div>
-              <div className="page-header-btns">
-                <button className="btn btn-g"
-                  onClick={() => setModalReserva({ reserva:null, fecha:hoyStr, hora:"10:00" })}>
-                  🔔 Reservar horario
-                </button>
-                <button className="btn btn-g"
-                  onClick={() => setModalTurno({ mode:"nuevo", sesion:null, fecha:hoyStr, hora:"10:00" })}>
-                  + Nuevo turno
-                </button>
-              </div>
-            </div>
+            {/* El encabezado y botones se movieron al Topbar principal */}
 
             {/* ══ PANEL OBJETIVOS DE LA SEMANA ══ */}
             <div
@@ -5205,14 +5250,45 @@
             </div>
 
             {/* RESUMEN SEMANAL */}
-            <button
-              onClick={() => setShowStats(v => !v)}
-              style={{ fontFamily:"var(--serif)", fontSize:"15px", fontWeight:700, color:"var(--tx)", marginBottom:"10px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"none", border:"none", padding:"0", textAlign:"left" }}
+            <div
+              style={{
+                background: "var(--vd)",
+                border: "2px solid var(--vm)",
+                borderLeft: "5px solid var(--do)",
+                borderRadius: "var(--r)",
+                padding: "20px 24px",
+                marginBottom: "18px",
+                position: "relative",
+                overflow: "hidden",
+              }}
             >
-              <span>Resumen semanal</span>
-              <span style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"var(--tx3)", fontWeight:400 }}>{showStats ? "▲ ocultar" : "▼ mostrar"}</span>
-            </button>
-            {showStats && (<div className="collapsible-enter"><>
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: "3px",
+                  background: "linear-gradient(90deg,var(--do),#E8B84B)",
+                }}
+              />
+              <button
+                onClick={() => setShowStats(v => !v)}
+                style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"none", border:"none", cursor:"pointer", padding:"0", marginBottom: showStats ? "16px" : "0", textAlign:"left" }}
+              >
+                <div>
+                  <div style={{ fontFamily:"var(--serif2)", fontSize:"22px", fontWeight:700, color:"var(--do)", lineHeight:1.1, textShadow:"0 1px 4px rgba(0,0,0,.4)" }}>
+                    📊 Resumen semanal
+                  </div>
+                  <div style={{ fontFamily:"var(--mono)", fontSize:"15px", color:"var(--do)", fontWeight:700, marginTop:"4px", letterSpacing:".04em" }}>
+                    {weekLabel}
+                  </div>
+                </div>
+                <span style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"rgba(200,146,42,.5)", fontWeight:400, flexShrink:0 }}>
+                  {showStats ? "▲ ocultar" : "▼ mostrar"}
+                </span>
+              </button>
+              {showStats && (<div className="collapsible-enter"><>
             <div className="totales-cobro">
               <div className="total-item cobrado">
                 <div className="total-item-label">Cobrado esta semana</div>
@@ -5339,6 +5415,7 @@
               </div>
             )}
             </></div>)}
+            </div>
 
             {/* BOTÓN NOVEDADES DE LA SEMANA + CREAR RECORDATORIO */}
             <div style={{ margin: "14px 0 0", display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap" }}>
@@ -11734,14 +11811,6 @@
         return (
           <React.Fragment>
             <div>
-              <div className="page-header">
-                <div className="page-header-icon">⚙️</div>
-                <div>
-                  <div className="page-header-title">Configuración</div>
-                  <div className="page-header-sub">Parámetros del sistema</div>
-                </div>
-              </div>
-
               {/* ── DATOS DEL PRESTADOR ── */}
               <div style={cfgWrap}>
                 <div
@@ -15354,15 +15423,23 @@
       function App() {
         const [activeSection, setActiveSection] = useState("agenda");
         const [badgeCounts, setBadgeCounts] = useState({});
+        const [modalTurno, setModalTurno] = useState(null);
+        const [modalReserva, setModalReserva] = useState(null);
+
+        const hoyStr = new Date().toISOString().slice(0, 10);
 
         useEffect(() => {
           setBadgeCounts(computeBadges());
         }, [activeSection]);
 
         function renderSection() {
+          const agendaProps = {
+            modalTurno, setModalTurno,
+            modalReserva, setModalReserva
+          };
           switch (activeSection) {
             case "agenda":
-              return <SeccionAgenda />;
+              return <SeccionAgenda {...agendaProps} />;
             case "pacientes":
               return <SeccionPacientes />;
             case "facturacion":
@@ -15378,7 +15455,7 @@
             case "vida_hogar":
               return <SeccionVidaHogar onNavigate={setActiveSection} />;
             default:
-              return <SeccionAgenda />;
+              return <SeccionAgenda {...agendaProps} />;
           }
         }
 
@@ -15387,6 +15464,8 @@
             <Topbar
               activeSection={activeSection}
               onNavigate={setActiveSection}
+              onNewTurno={() => setModalTurno({ mode: "nuevo", sesion: null, fecha: hoyStr, hora: "10:00" })}
+              onNewReserva={() => setModalReserva({ reserva: null, fecha: hoyStr, hora: "10:00" })}
             />
             <div className="app-layout">
               <Sidebar
