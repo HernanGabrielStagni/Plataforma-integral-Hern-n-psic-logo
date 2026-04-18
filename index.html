@@ -152,13 +152,7 @@
       }
 
       .topbar-center {
-        font-family: var(--serif);
-        font-size: 15px;
-        font-weight: 400;
-        color: rgba(255, 255, 255, 0.9);
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+        display: none; /* eliminado: page-header sticky ya muestra la sección */
       }
 
       .topbar-cta {
@@ -317,6 +311,9 @@
         margin-bottom: 24px;
         padding: 14px 20px;
         background: #BE9972;
+        position: sticky;
+        top: 64px;
+        z-index: 89;
         border-radius: var(--r);
         border: 2px solid #E8862F;
         border-left: 6px solid #E8862F;
@@ -923,6 +920,8 @@
         .obj-panel-view button[style] { width: 100% !important; box-sizing: border-box; }
         .obj-edit-actions { flex-direction: column; }
         .obj-edit-actions .btn { width: 100%; text-align: center; justify-content: center; }
+        /* page-header sticky en mobile debajo del topbar de 2 filas */
+        .page-header { top: 100px; }
         .main-content { padding: 16px 14px 80px; }
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
         .totales-cobro { grid-template-columns: 1fr; }
@@ -1398,17 +1397,31 @@
         color: rgba(255, 255, 255, 0.9);
         line-height: 1.1;
       }
-      .ag-day-hd.today .ag-day-num {
-        color: #fff;
-        background: var(--vd);
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
+      /* circulo que engloba abbr + numero para hoy */
+      .ag-today-badge {
         display: inline-flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
+        background: var(--vd);
+        border-radius: 20px;
+        padding: 4px 10px;
+        box-shadow: 0 0 0 2px var(--do), 0 2px 8px rgba(200,146,42,.3);
+        min-width: 44px;
+        margin: 0 auto 2px;
+      }
+      .ag-today-badge .ag-day-abbr {
+        color: rgba(255,255,255,.75);
+        font-size: 8px;
+      }
+      .ag-today-badge .ag-day-num {
+        color: #fff;
+        font-size: 20px;
         font-weight: 700;
-        box-shadow: 0 0 0 2px var(--do);
+        line-height: 1.1;
+      }
+      /* keep old rule for non-badge fallback */
+      .ag-day-hd.today .ag-day-num:not(.ag-today-badge .ag-day-num) {
+        color: var(--do);
       }
       .ag-day-abbr {
         font-family: var(--mono);
@@ -2609,8 +2622,17 @@
                     className={`ag-day-hd ${isToday ? "today" : ""} ${fInfo ? "feriado" : ""}`}
                     title={fInfo ? fInfo.nombre : ""}
                   >
-                    <div className="ag-day-abbr">{DIAS_HD[i]}</div>
-                    <div className="ag-day-num">{d.getDate()}</div>
+                    {isToday ? (
+                      <div className="ag-today-badge">
+                        <div className="ag-day-abbr">{DIAS_HD[i]}</div>
+                        <div className="ag-day-num">{d.getDate()}</div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="ag-day-abbr">{DIAS_HD[i]}</div>
+                        <div className="ag-day-num">{d.getDate()}</div>
+                      </>
+                    )}
                     <div className="ag-day-mes">
                       {MESES_CORTO[d.getMonth()]}
                     </div>
@@ -3943,42 +3965,52 @@
                 </button>
               </div>
               <div className="modal-body">
-                <div className="alert-warn" style={{ marginBottom: "16px" }}>
-                  ⚠️ Esta acción no se puede deshacer
-                </div>
-                <p
-                  style={{
-                    color: "rgba(255,255,255,.7)",
-                    marginBottom: "20px",
-                    lineHeight: 1.7,
-                  }}
-                >
-                  ¿Eliminás el turno de{" "}
-                  <strong style={{ color: "var(--do)" }}>
-                    {pac ? `${pac.nombre} ${pac.apellido}` : "este paciente"}
-                  </strong>{" "}
-                  del{" "}
-                  <span style={{ fontFamily: "var(--mono)" }}>
-                    {sesion?.fecha}
-                  </span>{" "}
-                  a las{" "}
-                  <span style={{ fontFamily: "var(--mono)" }}>
-                    {sesion?.horaInicio}
-                  </span>
-                  ?
-                </p>
                 <div
                   style={{
-                    display: "flex",
-                    gap: "10px",
-                    justifyContent: "flex-end",
+                    background: "rgba(200,146,42,.1)",
+                    border: "2px solid rgba(200,146,42,.35)",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    marginBottom: "18px",
+                    textAlign: "center",
                   }}
                 >
+                  <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚠️</div>
+                  <div
+                    style={{
+                      fontFamily: "var(--serif)",
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      color: "var(--do)",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    ¿Eliminar de forma permanente?
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "var(--sans)",
+                      fontSize: "12px",
+                      color: "rgba(255,255,255,.55)",
+                    }}
+                  >
+                    Esta acción no se puede deshacer
+                  </div>
+                </div>
+                {pac && (
+                  <p style={{ color: "rgba(255,255,255,.6)", marginBottom: "20px", lineHeight: 1.6, fontSize: "13px" }}>
+                    Turno de{" "}
+                    <strong style={{ color: "var(--do)" }}>{pac.nombre} {pac.apellido}</strong>
+                    {" "}— <span style={{ fontFamily: "var(--mono)" }}>{sesion?.fecha}</span>
+                    {" "}a las <span style={{ fontFamily: "var(--mono)" }}>{sesion?.horaInicio}</span>
+                  </p>
+                )}
+                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
                   <button className="btn btn-sec" onClick={onClose}>
                     Cancelar
                   </button>
                   <button className="btn btn-danger" onClick={onConfirm}>
-                    Eliminar turno
+                    🗑️ Eliminar
                   </button>
                 </div>
               </div>
@@ -4832,127 +4864,84 @@
                       <div
                         key={item.idx}
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
+                          background: "rgba(255,255,255,.04)",
+                          border: "1px solid rgba(200,146,42,.2)",
+                          borderRadius: "12px",
+                          padding: "11px 13px",
+                          marginBottom: "8px",
                         }}
                       >
-                        <div
-                          style={{
-                            fontFamily: "var(--mono)",
-                            fontSize: "10px",
-                            color: "var(--do)",
-                            fontWeight: 700,
-                            width: "14px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {item.idx + 1}.
+                        {/* Fila 1: círculo número + texto */}
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                          <div
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "50%",
+                              background: "var(--do)",
+                              color: "var(--vd)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontFamily: "var(--mono)",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              flexShrink: 0,
+                              marginTop: "1px",
+                            }}
+                          >
+                            {item.idx + 1}
+                          </div>
+                          <div
+                            style={{
+                              flex: 1,
+                              fontFamily: "var(--sans)",
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              color: item.texto ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.25)",
+                              fontStyle: item.texto ? "normal" : "italic",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {item.texto || "— Sin objetivo definido —"}
+                          </div>
                         </div>
-                        <div
-                          style={{
-                            flex: 1,
-                            fontFamily: "var(--sans)",
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            color: item.texto
-                              ? "rgba(255,255,255,.9)"
-                              : "rgba(255,255,255,.25)",
-                            fontStyle: item.texto ? "normal" : "italic",
-                          }}
-                        >
-                          {item.texto || "— Sin objetivo definido —"}
-                        </div>
+                        {/* Fila 2: estado + caritas + porcentaje */}
                         {item.texto && item.stats.bueno !== null && (
                           <div
                             style={{
                               display: "flex",
-                              gap: "12px",
-                              flexShrink: 0,
                               alignItems: "center",
+                              gap: "10px",
+                              marginTop: "8px",
+                              paddingLeft: "32px",
+                              flexWrap: "wrap",
                             }}
                           >
                             <span
-                              style={{
-                                fontFamily: "var(--mono)",
-                                fontSize: "10px",
-                                color: "rgba(255,255,255,.25)",
-                                whiteSpace: "nowrap",
-                              }}
-                              title="Sesiones calificadas / total"
+                              style={{ fontFamily: "var(--mono)", fontSize: "10px", color: "rgba(255,255,255,.25)", whiteSpace: "nowrap" }}
+                              title="Calificadas / total"
                             >
                               {item.stats.rated}/{item.stats.total}
                             </span>
-                            <span
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "3px",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "11px",
-                                  fontWeight: 700,
-                                  color: "#F87171",
-                                }}
-                              >
-                                {item.stats.countMalo}
-                              </span>
-                              <span style={{ fontSize: "16px" }}>😞</span>
-                              <span
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "9px",
-                                  color: "rgba(248,113,113,.5)",
-                                }}
-                              >
-                                {item.stats.malo}%
-                              </span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 700, color: "#F87171" }}>{item.stats.countMalo}</span>
+                              <span style={{ fontSize: "14px" }}>😞</span>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "rgba(248,113,113,.5)" }}>{item.stats.malo}%</span>
                             </span>
-                            <span
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "3px",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "11px",
-                                  fontWeight: 700,
-                                  color: "#7DCC90",
-                                }}
-                              >
-                                {item.stats.countBueno}
-                              </span>
-                              <span style={{ fontSize: "16px" }}>😊</span>
-                              <span
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "9px",
-                                  color: "rgba(125,204,144,.5)",
-                                }}
-                              >
-                                {item.stats.bueno}%
-                              </span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: "11px", fontWeight: 700, color: "#7DCC90" }}>{item.stats.countBueno}</span>
+                              <span style={{ fontSize: "14px" }}>😊</span>
+                              <span style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "rgba(125,204,144,.5)" }}>{item.stats.bueno}%</span>
                             </span>
                           </div>
                         )}
                         {item.texto && item.stats.bueno === null && (
-                          <span
-                            style={{
-                              fontFamily: "var(--mono)",
-                              fontSize: "10px",
-                              color: "rgba(255,255,255,.2)",
-                            }}
-                          >
-                            {item.stats.total > 0
-                              ? `0/${item.stats.total} calificados`
-                              : "sin sesiones"}
-                          </span>
+                          <div style={{ paddingLeft: "32px", marginTop: "6px" }}>
+                            <span style={{ fontFamily: "var(--mono)", fontSize: "10px", color: "rgba(255,255,255,.2)" }}>
+                              {item.stats.total > 0 ? `0/${item.stats.total} calificados` : "sin sesiones"}
+                            </span>
+                          </div>
                         )}
                       </div>
                     ))}
