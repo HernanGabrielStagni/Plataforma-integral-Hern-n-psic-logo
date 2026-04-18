@@ -557,26 +557,25 @@
         border-bottom: 1px solid rgba(255,255,255,.07);
         margin-bottom: 2px;
       }
-      .mt-always-row .modal-input { padding: 7px 10px; margin-bottom: 0; }
+      .mt-always-row .modal-input { padding: 7px 10px; margin-bottom: 0; border: 2px solid var(--do); background: rgba(200,146,42,.08); }
       /* ── ACORDEÓN ── */
       .acc-row { border-bottom: 1px solid rgba(255,255,255,.07); }
       .acc-row:last-of-type { border-bottom: none; }
       .acc-head {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 10px 4px; cursor: pointer; user-select: none;
+        padding: 11px 4px; cursor: pointer; user-select: none;
         border-radius: 8px; transition: background .15s;
       }
       .acc-head:hover { background: rgba(255,255,255,.04); }
-      .acc-label-col { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+      .acc-label-col { display: flex; flex-direction: row; align-items: center; gap: 10px; flex: 1; min-width: 0; }
       .acc-label {
-        font-family: var(--mono); font-size: 10px;
-        text-transform: uppercase; color: rgba(255,255,255,.38);
-        letter-spacing: .07em;
+        font-family: var(--sans); font-size: 13px; font-weight: 600;
+        color: rgba(255,255,255,.88); white-space: nowrap;
       }
       .acc-value {
-        font-family: var(--sans); font-size: 13px;
-        color: rgba(255,255,255,.82); white-space: nowrap;
-        overflow: hidden; text-overflow: ellipsis;
+        font-family: var(--mono); font-size: 12px;
+        color: var(--do); flex: 1; text-align: right;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
       .acc-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; margin-left: 8px; }
       .acc-check-done { color: #7DCC90; font-size: 14px; font-weight: 700; }
@@ -3446,22 +3445,11 @@
                   </div>
                 </div>
               ) : (
-                <div className="modal-header" style={{ alignItems: isEditar && busq ? "flex-start" : "center" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {isEditar && busq ? (
-                      <>
-                        <div className="mt-pac-nombre">{busq}</div>
-                        <div className="mt-datetime">
-                          {f.fecha ? f.fecha.split("-").reverse().join("/") : ""}
-                          {f.horaInicio ? " · " + f.horaInicio : ""}
-                          {f.horaFin ? " – " + f.horaFin : ""}
-                        </div>
-                      </>
-                    ) : (
-                      <span className="modal-title">{isEditar ? "Editar turno" : "Nuevo turno"}</span>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center", flexShrink: 0, marginLeft: "10px", marginTop: isEditar && busq ? "2px" : "0" }}>
+                <div className="modal-header">
+                  <span className="modal-title">
+                    {isEditar ? "Edición de turno" : "Creación de turno"}
+                  </span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", flexShrink: 0 }}>
                     {isEditar && (
                       <button className="modal-icon-btn danger" onClick={() => onDelete(f)} title="Eliminar">🗑️</button>
                     )}
@@ -3471,33 +3459,45 @@
                 </div>
               )}
               <div className="modal-body">
-                {/* ─── CREATE: búsqueda de paciente ─── */}
-                {!isEditar && (
-                  <div style={{ marginBottom: "12px" }}>
-                    <div className="modal-label">Paciente</div>
-                    <div style={{ position: "relative" }}>
-                      <input
-                        className="modal-input"
-                        style={{ marginBottom: 0 }}
-                        placeholder="Buscar por nombre o DNI..."
-                        value={busq}
-                        onChange={(e) => handleBusq(e.target.value)}
-                        onFocus={() => busq.length >= 2 && setShowSugs(true)}
-                        onBlur={() => setTimeout(() => setShowSugs(false), 180)}
-                      />
-                      {showSugs && (
-                        <div className="pac-sugs">
-                          {sugs.map((p) => (
-                            <div key={p.id} className="pac-sug-item" onMouseDown={() => selectPac(p)}>
-                              <span className="pac-sug-nombre">{p.nombre} {p.apellido}</span>
-                              <span className="pac-sug-dni">DNI {p.dni}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                {/* ─── 0. PACIENTE ─── */}
+                <div className="acc-row">
+                  <div className="acc-head" onClick={() => !isEditar && toggleSec("paciente")} style={{ cursor: isEditar ? "default" : "pointer" }}>
+                    <div className="acc-label-col">
+                      <span className="acc-label">Paciente</span>
+                      <span className="acc-value">{busq || "Sin seleccionar"}</span>
+                    </div>
+                    <div className="acc-right">
+                      <span className={busq ? "acc-check-done" : "acc-check-pend"}>{busq ? "✓" : "○"}</span>
+                      {!isEditar && <span className="acc-arrow">{openSection === "paciente" ? "▴" : "▾"}</span>}
                     </div>
                   </div>
-                )}
+                  {!isEditar && openSection === "paciente" && (
+                    <div className="acc-body">
+                      <div style={{ position: "relative" }}>
+                        <input
+                          className="modal-input"
+                          style={{ marginBottom: 0 }}
+                          placeholder="Buscar por nombre o DNI..."
+                          value={busq}
+                          onChange={(e) => handleBusq(e.target.value)}
+                          onFocus={() => busq.length >= 2 && setShowSugs(true)}
+                          onBlur={() => setTimeout(() => setShowSugs(false), 180)}
+                          autoFocus
+                        />
+                        {showSugs && (
+                          <div className="pac-sugs">
+                            {sugs.map((p) => (
+                              <div key={p.id} className="pac-sug-item" onMouseDown={() => { selectPac(p); setOpenSection(null); }}>
+                                <span className="pac-sug-nombre">{p.nombre} {p.apellido}</span>
+                                <span className="pac-sug-dni">DNI {p.dni}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* ─── FECHA + HORARIO (siempre visible) ─── */}
                 <div className="mt-always-row">
@@ -3687,40 +3687,6 @@
                   </div>
                 )}
 
-                {/* ─── 4. CALIFICACIÓN DE OBJETIVOS ─── */}
-                {tieneObjetivos && (
-                  <div className="acc-row">
-                    <div className="acc-head" onClick={() => toggleSec("calific")}>
-                      <div className="acc-label-col">
-                        <span className="acc-label">Calificación de objetivos</span>
-                        <span className="acc-value">{calificResumen}</span>
-                      </div>
-                      <div className="acc-right">
-                        <span className={calificCmpleto ? "acc-check-done" : "acc-check-pend"}>{calificCmpleto ? "✓" : "○"}</span>
-                        <span className="acc-arrow">{openSection === "calific" ? "▴" : "▾"}</span>
-                      </div>
-                    </div>
-                    {openSection === "calific" && (
-                      <div className="acc-body">
-                        {[{ num:1, texto:objSemana?.obj1, campo:"obj1Estado" }, { num:2, texto:objSemana?.obj2, campo:"obj2Estado" }]
-                          .filter((item) => item.texto)
-                          .map((item) => (
-                            <div key={item.num} style={{ marginBottom:"10px" }}>
-                              <div style={{ fontFamily:"var(--sans)", fontSize:"12px", fontWeight:600, color:"rgba(255,255,255,.75)", marginBottom:"6px" }}>
-                                <span style={{ fontFamily:"var(--mono)", fontSize:"10px", color:"var(--do)", marginRight:"6px" }}>{item.num}.</span>{item.texto}
-                              </div>
-                              <div style={{ display:"flex", gap:"8px" }}>
-                                {[{ val:"malo", emoji:"😞", label:"No logrado", bg:"rgba(248,113,113,.15)", bord:"rgba(248,113,113,.4)", col:"#F87171" }, { val:"bueno", emoji:"😊", label:"Logrado", bg:"rgba(125,204,144,.15)", bord:"rgba(125,204,144,.4)", col:"#7DCC90" }].map((opt) => {
-                                  const sel = f[item.campo] === opt.val;
-                                  return <button key={opt.val} onClick={() => handleObjRating(item.campo, opt.val)} title={opt.label} style={{ flex:1, padding:"7px 4px", borderRadius:"10px", border:`2px solid ${sel ? opt.bord : "rgba(255,255,255,.08)"}`, background:sel ? opt.bg : "rgba(255,255,255,.03)", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:"2px", transition:"all .15s", transform:sel ? "scale(1.06)" : "scale(1)" }}><span style={{ fontSize:"20px", lineHeight:1 }}>{opt.emoji}</span><span style={{ fontFamily:"var(--mono)", fontSize:"9px", color:sel ? opt.col : "rgba(255,255,255,.3)", letterSpacing:".04em" }}>{opt.label}</span></button>;
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* ─── 5. NOTAS Y COMENTARIOS ─── */}
                 <div className="acc-row" style={{ borderBottom:"none" }}>
@@ -3760,146 +3726,49 @@
                   )}
                 </div>
 
-                {/* PANEL CONFLICTOS */}
-                {showConflictos && conflictos.length > 0 && (
-                  <div style={{ background:"rgba(122,40,0,.25)", border:"2px solid rgba(249,115,22,.4)", borderRadius:"12px", padding:"14px", marginTop:"8px" }}>
-                    <div style={{ fontFamily:"var(--mono)", fontSize:"11px", color:"#FED7AA", textTransform:"uppercase", letterSpacing:".06em", marginBottom:"8px" }}>⚠️ Superposición detectada</div>
-                    {conflictos.map((c, i) => { const cpac = pacientes.find((p) => p.id === c.pacienteId); return <div key={i} style={{ fontFamily:"var(--mono)", fontSize:"12px", color:"rgba(255,255,255,.7)", marginBottom:"4px", paddingLeft:"8px", borderLeft:"2px solid rgba(249,115,22,.5)" }}><span style={{ color:"#FED7AA" }}>{c.horaInicio}–{c.horaFin}</span>{cpac && <span style={{ marginLeft:"6px" }}>{cpac.nombre} {cpac.apellido}</span>}</div>; })}
-                    <div style={{ display:"flex", gap:"8px", marginTop:"10px" }}>
-                      <button className="btn btn-sec" style={{ fontSize:"12px", padding:"6px 12px" }} onClick={() => { setShowConflictos(false); setConflictos([]); }}>Corregir</button>
-                      <button style={{ borderRadius:"50px", padding:"6px 14px", fontSize:"12px", fontFamily:"var(--sans)", fontWeight:600, background:"rgba(249,115,22,.25)", border:"2px solid rgba(249,115,22,.5)", color:"#FED7AA", cursor:"pointer" }} onClick={handleSaveForzado}>Guardar de todos modos</button>
+                {/* ─── 6. OBJETIVOS DE LA SEMANA ─── */}
+                {isEditar && tieneObjetivos && (
+                  <div className="acc-row" style={{ borderBottom: "none" }}>
+                    <div className="acc-head" onClick={() => toggleSec("objetivos")}>
+                      <div className="acc-label-col">
+                        <span className="acc-label">🎯 Objetivos</span>
+                        <span className="acc-value">{calificResumen}</span>
+                      </div>
+                      <div className="acc-right">
+                        <span className={calificCmpleto ? "acc-check-done" : "acc-check-pend"}>{calificCmpleto ? "✓" : "○"}</span>
+                        <span className="acc-arrow">{openSection === "objetivos" ? "▴" : "▾"}</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-
-                {/* ── DIVISOR ── */}
-                <div
-                  style={{
-                    borderTop: "1px solid rgba(255,255,255,0.1)",
-                    margin: "16px 0 14px 0",
-                  }}
-                ></div>
-
-                {/* ── OBJETIVOS DE LA SEMANA ── */}
-                {tieneObjetivos && (
-                  <div
-                    style={{
-                      marginTop: "14px",
-                      background: "rgba(200,146,42,.07)",
-                      border: "1px solid rgba(200,146,42,.25)",
-                      borderLeft: "3px solid var(--do)",
-                      borderRadius: "12px",
-                      padding: "12px 14px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontFamily: "var(--mono)",
-                        fontSize: "10px",
-                        color: "rgba(200,146,42,.7)",
-                        textTransform: "uppercase",
-                        letterSpacing: ".07em",
-                        marginBottom: "10px",
-                      }}
-                    >
-                      🎯 Objetivos de la semana
-                    </div>
-                    {[
-                      { num: 1, texto: objSemana?.obj1, campo: "obj1Estado" },
-                      { num: 2, texto: objSemana?.obj2, campo: "obj2Estado" },
-                    ]
-                      .filter((item) => item.texto)
-                      .map((item) => (
-                        <div key={item.num} style={{ marginBottom: "10px" }}>
-                          <div
-                            style={{
-                              fontFamily: "var(--sans)",
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              color: "rgba(255,255,255,.75)",
-                              marginBottom: "6px",
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontFamily: "var(--mono)",
-                                fontSize: "10px",
-                                color: "var(--do)",
-                                marginRight: "6px",
-                              }}
-                            >
-                              {item.num}.
-                            </span>
-                            {item.texto}
+                    {openSection === "objetivos" && (
+                      <div className="acc-body">
+                        {[
+                          { num: 1, texto: objSemana?.obj1, campo: "obj1Estado" },
+                          { num: 2, texto: objSemana?.obj2, campo: "obj2Estado" },
+                        ].filter((item) => item.texto).map((item) => (
+                          <div key={item.num} style={{ marginBottom: "10px" }}>
+                            <div style={{ fontFamily:"var(--sans)", fontSize:"12px", fontWeight:600, color:"rgba(255,255,255,.75)", marginBottom:"6px" }}>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:"10px", color:"var(--do)", marginRight:"6px" }}>{item.num}.</span>
+                              {item.texto}
+                            </div>
+                            <div style={{ display:"flex", gap:"8px" }}>
+                              {[
+                                { val:"malo", emoji:"😞", label:"No logrado", bg:"rgba(248,113,113,.15)", bord:"rgba(248,113,113,.4)", col:"#F87171" },
+                                { val:"bueno", emoji:"😊", label:"Logrado", bg:"rgba(125,204,144,.15)", bord:"rgba(125,204,144,.4)", col:"#7DCC90" },
+                              ].map((opt) => {
+                                const sel = f[item.campo] === opt.val;
+                                return (
+                                  <button key={opt.val} onClick={() => handleObjRating(item.campo, opt.val)} title={opt.label}
+                                    style={{ flex:1, padding:"8px 4px", borderRadius:"10px", border:`2px solid ${sel ? opt.bord : "rgba(255,255,255,.08)"}`, background:sel ? opt.bg : "rgba(255,255,255,.03)", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:"3px", transition:"all .15s", transform:sel ? "scale(1.06)" : "scale(1)" }}>
+                                    <span style={{ fontSize:"22px", lineHeight:1 }}>{opt.emoji}</span>
+                                    <span style={{ fontFamily:"var(--mono)", fontSize:"9px", color:sel ? opt.col : "rgba(255,255,255,.3)", letterSpacing:".04em" }}>{opt.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div style={{ display: "flex", gap: "8px" }}>
-                            {[
-                              {
-                                val: "malo",
-                                emoji: "😞",
-                                label: "No logrado",
-                                bg: "rgba(248,113,113,.15)",
-                                bord: "rgba(248,113,113,.4)",
-                                col: "#F87171",
-                              },
-                              {
-                                val: "bueno",
-                                emoji: "😊",
-                                label: "Logrado",
-                                bg: "rgba(125,204,144,.15)",
-                                bord: "rgba(125,204,144,.4)",
-                                col: "#7DCC90",
-                              },
-                            ].map((opt) => {
-                              const sel = f[item.campo] === opt.val;
-                              return (
-                                <button
-                                  key={opt.val}
-                                  onClick={() =>
-                                    handleObjRating(item.campo, opt.val)
-                                  }
-                                  title={opt.label}
-                                  style={{
-                                    flex: 1,
-                                    padding: "7px 4px",
-                                    borderRadius: "10px",
-                                    border: `2px solid ${sel ? opt.bord : "rgba(255,255,255,.08)"}`,
-                                    background: sel
-                                      ? opt.bg
-                                      : "rgba(255,255,255,.03)",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    gap: "2px",
-                                    transition: "all .15s",
-                                    transform: sel ? "scale(1.06)" : "scale(1)",
-                                  }}
-                                >
-                                  <span
-                                    style={{ fontSize: "18px", lineHeight: 1 }}
-                                  >
-                                    {opt.emoji}
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontFamily: "var(--mono)",
-                                      fontSize: "9px",
-                                      color: sel
-                                        ? opt.col
-                                        : "rgba(255,255,255,.3)",
-                                      letterSpacing: ".04em",
-                                    }}
-                                  >
-                                    {opt.label}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
