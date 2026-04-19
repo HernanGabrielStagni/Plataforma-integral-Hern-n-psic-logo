@@ -72,6 +72,7 @@
         --sans: "Inter", sans-serif;
         --mono: "DM Mono", monospace;
         --serif-num: "DM Sans", sans-serif;
+        --mobile-topbar-offset: 128px;
       }
 
       body {
@@ -132,6 +133,9 @@
         display: flex;
         align-items: center;
         gap: 14px;
+      }
+      .topbar-brand-copy {
+        min-width: 0;
       }
 
       .topbar-icon {
@@ -201,6 +205,12 @@
         display: flex;
         gap: 10px;
         margin-right: 10px;
+      }
+      .topbar-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
       }
 
       /* ── LAYOUT PRINCIPAL ── */
@@ -1074,28 +1084,65 @@
 
         .topbar-brand {
           flex: 1;
+          min-width: 0;
+          gap: 10px;
         }
         .topbar-cta {
           display: none;
         }
+        .topbar-row-1 {
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px 14px 8px;
+        }
+        .topbar-title {
+          font-size: 18px;
+          line-height: 1.15;
+          overflow-wrap: anywhere;
+        }
+        .topbar-subtitle {
+          font-size: 11px;
+          line-height: 1.25;
+          overflow-wrap: anywhere;
+        }
         .topbar-actions .topbar-cta {
           display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 1 1 140px;
+          min-width: 0;
+          max-width: 180px;
           font-size: 11px;
-          padding: 6px 10px;
-          gap: 4px;
-          white-space: nowrap;
+          line-height: 1.2;
+          padding: 8px 10px;
+          gap: 6px;
+          white-space: normal;
+          text-align: center;
         }
         .topbar-actions .topbar-cta span {
           font-size: 13px !important;
+          flex-shrink: 0;
         }
         .topbar-row-2 {
-          padding: 8px 12px;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 10px;
+          padding: 8px 12px 10px;
+        }
+        .topbar-section {
+          width: 100%;
+          justify-content: center;
+          text-align: center;
+          gap: 10px;
         }
         .topbar-section-title {
-          font-size: 20px !important;
+          font-size: 18px !important;
+          line-height: 1.15;
+          overflow-wrap: anywhere;
         }
         .topbar-section-emoji {
-          font-size: 20px !important;
+          font-size: 22px !important;
+          flex-shrink: 0;
         }
         .topbar-center {
           display: none;
@@ -1111,6 +1158,12 @@
           align-items: center;
           padding: 0 14px;
         }
+        .topbar-actions {
+          width: 100%;
+          margin-right: 0;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
         .topbar-breadcrumb {
           display: flex;
           align-items: center;
@@ -1125,8 +1178,8 @@
         }
         .app-layout {
           flex-direction: column;
-          margin-top: 100px;
-          min-height: calc(100vh - 100px - 60px);
+          margin-top: var(--mobile-topbar-offset);
+          min-height: calc(100vh - var(--mobile-topbar-offset) - 60px);
         }
         /* BUG 1 — Objetivos responsive */
         .obj-panel-view {
@@ -1147,7 +1200,7 @@
         }
         /* page-header sticky en mobile debajo del topbar de 2 filas */
         .page-header {
-          top: 100px;
+          top: var(--mobile-topbar-offset);
         }
         .main-content {
           padding: 16px 14px 80px;
@@ -1159,14 +1212,15 @@
           grid-template-columns: 1fr;
         }
         .agenda-acciones {
-          flex-direction: column;
           margin-left: 0;
           width: 100%;
+          justify-content: center;
         }
         .agenda-acciones .btn,
         .agenda-acciones > button,
         .agenda-acciones > span {
-          width: 100%;
+          width: auto;
+          min-width: min(100%, 180px);
           justify-content: center;
           text-align: center;
         }
@@ -1175,6 +1229,7 @@
         }
         .agenda-toolbar {
           justify-content: center;
+          gap: 8px !important;
         }
         .agenda-novedades-row {
           justify-content: center;
@@ -2345,14 +2400,45 @@
       /* ═══════════════════════════════════════ */
       function Topbar({ activeSection, onNavigate, onNewTurno, onNewReserva }) {
         const current = NAV_SECTIONS.find((s) => s.id === activeSection);
+        const topbarRef = useRef(null);
+
+        useEffect(() => {
+          const root = document.documentElement;
+          const syncTopbarOffset = () => {
+            const fallback = "128px";
+            if (window.innerWidth > 767) {
+              root.style.setProperty("--mobile-topbar-offset", fallback);
+              return;
+            }
+            const height = topbarRef.current?.offsetHeight || 0;
+            root.style.setProperty(
+              "--mobile-topbar-offset",
+              height ? `${height}px` : fallback,
+            );
+          };
+
+          syncTopbarOffset();
+          window.addEventListener("resize", syncTopbarOffset);
+
+          let observer = null;
+          if (typeof ResizeObserver !== "undefined" && topbarRef.current) {
+            observer = new ResizeObserver(syncTopbarOffset);
+            observer.observe(topbarRef.current);
+          }
+
+          return () => {
+            window.removeEventListener("resize", syncTopbarOffset);
+            if (observer) observer.disconnect();
+          };
+        }, [activeSection]);
 
         return (
-          <div className="topbar">
+          <div className="topbar" ref={topbarRef}>
             {/* ROW 1: BRAND */}
             <div className="topbar-row-1">
               <div className="topbar-brand">
                 <div className="topbar-icon">🌱</div>
-                <div>
+                <div className="topbar-brand-copy">
                   <div className="topbar-title">Plataforma Integral</div>
                   <div className="topbar-subtitle">
                     Hernán Gabriel Stagni · MP 11919 · v1.0
@@ -2371,9 +2457,7 @@
 
             {/* ROW 2: SECTION TITLE & ACTIONS */}
             <div className="topbar-row-2">
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "12px" }}
-              >
+              <div className="topbar-section">
                 <span className="topbar-section-emoji" style={{ fontSize: "28px" }}>
                   {current?.id === "agenda" ? "🗓️" : current?.emoji}
                 </span>
