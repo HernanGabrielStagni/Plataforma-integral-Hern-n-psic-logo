@@ -2615,7 +2615,10 @@
             {/* ROW 2: SECTION TITLE & ACTIONS */}
             <div className="topbar-row-2">
               <div className="topbar-section">
-                <span className="topbar-section-emoji" style={{ fontSize: "28px" }}>
+                <span
+                  className="topbar-section-emoji"
+                  style={{ fontSize: "28px" }}
+                >
                   {current?.id === "agenda" ? "🗓️" : current?.emoji}
                 </span>
                 <span
@@ -7189,7 +7192,9 @@
                     flexShrink: 0,
                   }}
                 >
-                  <span style={{ fontSize: "18px", lineHeight: 1 }}>{showStats ? "▲" : "▼"}</span>
+                  <span style={{ fontSize: "18px", lineHeight: 1 }}>
+                    {showStats ? "▲" : "▼"}
+                  </span>
                 </span>
               </button>
               {showStats && (
@@ -7385,7 +7390,9 @@
               >
                 Novedades de la semana
                 <span style={{ fontSize: "16px", lineHeight: 1 }}>
-                  {novedadesItems.length + recordatoriosActivos.length > 0 ? "❗" : "✓"}
+                  {novedadesItems.length + recordatoriosActivos.length > 0
+                    ? "❗"
+                    : "✓"}
                 </span>
               </button>
               <button
@@ -7926,7 +7933,9 @@
                         display: "inline-block",
                         transition: "transform .35s",
                         transform:
-                          vista === "mensual" ? "rotate(180deg)" : "rotate(0deg)",
+                          vista === "mensual"
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
                         fontSize: "15px",
                         lineHeight: 1,
                       }}
@@ -8030,7 +8039,7 @@
                           lineHeight: 1,
                         }}
                       >
-                        Hoy
+                        Semana Actual
                       </button>
                       <button
                         onClick={nextWeek}
@@ -8087,7 +8096,7 @@
                         gap: "6px",
                       }}
                     >
-                      ⤵️ Turnos Fijos...
+                      🔃 CargarTurnos Fijos
                       {coordSemana.length > 0 && (
                         <span
                           style={{
@@ -8247,7 +8256,9 @@
                     <span className="agenda-legend-state-icon">{"\u2705"}</span>
                     <span className="agenda-legend-state-icon">{"\u274C"}</span>
                     <span className="agenda-legend-state-icon">{"\u23F3"}</span>
-                    <span className="agenda-legend-state-icon">{"\uD83D\uDD04"}</span>
+                    <span className="agenda-legend-state-icon">
+                      {"\uD83D\uDD04"}
+                    </span>
                     <span className="agenda-legend-state-icon">
                       {"\u26A0\uFE0F"}
                     </span>
