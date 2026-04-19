@@ -1039,6 +1039,130 @@
       .agenda-primary-today {
         width: 100%;
       }
+      .agenda-legend-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 14px;
+        flex-wrap: nowrap;
+      }
+      .agenda-legend-dropdown {
+        position: relative;
+        flex: 1 1 0;
+        min-width: 0;
+      }
+      .agenda-legend-dropdown summary {
+        list-style: none;
+      }
+      .agenda-legend-dropdown summary::-webkit-details-marker {
+        display: none;
+      }
+      .agenda-legend-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        gap: 6px;
+        min-height: 28px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(200, 146, 42, 0.45);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 248, 235, 0.98),
+          rgba(247, 239, 224, 0.96)
+        );
+        color: #6f5b36;
+        cursor: pointer;
+        user-select: none;
+        overflow: hidden;
+        transition:
+          border-color 0.18s ease,
+          background 0.18s ease,
+          box-shadow 0.18s ease,
+          transform 0.18s ease;
+      }
+      .agenda-legend-trigger:hover {
+        border-color: rgba(200, 146, 42, 0.72);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 245, 222, 1),
+          rgba(245, 234, 210, 0.98)
+        );
+        box-shadow: 0 8px 18px rgba(200, 146, 42, 0.14);
+        transform: translateY(-1px);
+      }
+      .agenda-legend-dropdown[open] .agenda-legend-trigger {
+        border-color: rgba(200, 146, 42, 0.82);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 243, 214, 1),
+          rgba(244, 231, 203, 0.98)
+        );
+        box-shadow: 0 10px 22px rgba(200, 146, 42, 0.18);
+      }
+      .agenda-legend-icons {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        flex-wrap: nowrap;
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+      }
+      .agenda-legend-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .agenda-legend-state-icon {
+        font-size: 13px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .agenda-legend-caret {
+        font-family: sans-serif;
+        font-size: 8px;
+        line-height: 1;
+        color: rgba(111, 91, 54, 0.72);
+        flex-shrink: 0;
+        transition: transform 0.18s ease;
+      }
+      .agenda-legend-dropdown[open] .agenda-legend-caret {
+        transform: rotate(180deg);
+      }
+      .agenda-legend-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        min-width: 260px;
+        max-width: min(92vw, 420px);
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(184, 176, 160, 0.8);
+        background: rgba(255, 252, 247, 0.98);
+        box-shadow: 0 16px 34px rgba(72, 61, 47, 0.16);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        z-index: 20;
+      }
+      .agenda-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--tx3);
+        white-space: nowrap;
+      }
+      .agenda-legend-item.warn {
+        color: var(--do);
+        font-weight: 700;
+      }
       /* ── PANEL OBJETIVOS ── */
       .obj-panel-view {
         display: flex;
@@ -1251,6 +1375,18 @@
         .agenda-primary-controls {
           flex: 1 1 100%;
           max-width: 100%;
+        }
+        .agenda-legend-row {
+          justify-content: space-between;
+        }
+        .agenda-legend-trigger {
+          padding: 4px 8px;
+          gap: 4px;
+        }
+        .agenda-legend-panel {
+          left: 50%;
+          transform: translateX(-50%);
+          min-width: min(92vw, 320px);
         }
         .agenda-novedades-row {
           justify-content: center;
@@ -8008,7 +8144,7 @@
             {/* LEYENDA TIPOS */}
             <div
               style={{
-                display: "flex",
+                display: "none",
                 gap: "14px",
                 marginBottom: "14px",
                 flexWrap: "wrap",
@@ -8066,6 +8202,80 @@
               </div>
             </div>
 
+            {/* LEYENDA COMPACTA */}
+            <div className="agenda-legend-row">
+              <details className="agenda-legend-dropdown">
+                <summary className="agenda-legend-trigger" title="Ver tipos">
+                  <span className="agenda-legend-icons" aria-hidden="true">
+                    {[
+                      "individual",
+                      "AT",
+                      "pareja",
+                      "grupo",
+                      "reserva_personal",
+                    ].map((t) => (
+                      <span
+                        key={t}
+                        className="agenda-legend-dot"
+                        style={{ background: TIPO_COLORS[t].border }}
+                      />
+                    ))}
+                  </span>
+                  <span className="agenda-legend-caret">{"\u25BE"}</span>
+                </summary>
+                <div className="agenda-legend-panel">
+                  {[
+                    ["individual", "Individual"],
+                    ["AT", "AT"],
+                    ["pareja", "Pareja"],
+                    ["grupo", "Grupo"],
+                    ["reserva_personal", "Reserva"],
+                  ].map(([t, l]) => (
+                    <span key={t} className="agenda-legend-item">
+                      <span
+                        className="agenda-legend-dot"
+                        style={{ background: TIPO_COLORS[t].border }}
+                      />
+                      {l}
+                    </span>
+                  ))}
+                </div>
+              </details>
+              <details className="agenda-legend-dropdown">
+                <summary className="agenda-legend-trigger" title="Ver estados">
+                  <span className="agenda-legend-icons" aria-hidden="true">
+                    <span className="agenda-legend-state-icon">{"\u2705"}</span>
+                    <span className="agenda-legend-state-icon">{"\u274C"}</span>
+                    <span className="agenda-legend-state-icon">{"\u23F3"}</span>
+                    <span className="agenda-legend-state-icon">{"\uD83D\uDD04"}</span>
+                    <span className="agenda-legend-state-icon">
+                      {"\u26A0\uFE0F"}
+                    </span>
+                  </span>
+                  <span className="agenda-legend-caret">{"\u25BE"}</span>
+                </summary>
+                <div className="agenda-legend-panel">
+                  <span className="agenda-legend-item">
+                    {"\u2705"} asisti{"\u00F3"}
+                  </span>
+                  <span className="agenda-legend-item">
+                    {"\u274C"} cancel{"\u00F3"}
+                  </span>
+                  <span className="agenda-legend-item">
+                    {"\u23F3"} pendiente
+                  </span>
+                  <span className="agenda-legend-item">
+                    {"\uD83D\uDD04"} reprogram{"\u00F3"}
+                  </span>
+                  <span className="agenda-legend-item">
+                    {"\u26A0\uFE0F"} superposici{"\u00F3"}n
+                  </span>
+                  <span className="agenda-legend-item warn">
+                    ! cobro/orden pendiente
+                  </span>
+                </div>
+              </details>
+            </div>
             {/* GRILLA SEMANAL */}
             {vista === "semanal" && (
               <AgendaGridSemanal
