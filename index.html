@@ -612,21 +612,29 @@
       }
       .modal-confirm-cancel {
         display: flex;
-        flex-direction: column;
-        gap: 10px;
-        padding: 14px 22px;
-        background: var(--vd);
-        border-bottom: 1px solid rgba(200, 146, 42, 0.15);
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 22px;
+        background: rgba(10, 18, 10, 0.97);
+        border-top: 1px solid rgba(200, 146, 42, 0.3);
         flex-shrink: 0;
+        animation: confirm-slide-up 0.18s ease;
+      }
+      @keyframes confirm-slide-up {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
       }
       .modal-confirm-cancel-text {
         color: rgba(255, 255, 255, 0.85);
         font-size: 13px;
         font-family: var(--sans);
+        flex: 1;
       }
       .modal-confirm-cancel-btns {
         display: flex;
         gap: 8px;
+        flex-shrink: 0;
       }
       /* ── MODAL TURNO: cabecera compacta ── */
       .mt-pac-nombre {
@@ -1926,7 +1934,7 @@
       .ag-col {
         position: relative;
         border-right: 1px solid #ddd5c4;
-        height: 720px;
+        height: var(--ag-total-h, 900px);
         cursor: pointer;
       }
       .ag-col:last-child {
@@ -2375,7 +2383,44 @@
           <div className="modal-overlay" onClick={handleOverlayClick}>
             <div className="modal-card">
               <div className="modal-bar"></div>
-              {confirmClose ? (
+              <div className="modal-header">
+                <span className="modal-title">{title}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    alignItems: "center",
+                  }}
+                >
+                  {onDelete && (
+                    <button
+                      className="modal-icon-btn danger"
+                      onClick={onDelete}
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                  {onSave && (
+                    <button
+                      className="modal-icon-btn"
+                      onClick={onSave}
+                      title="Guardar"
+                    >
+                      💾
+                    </button>
+                  )}
+                  <button
+                    className="modal-icon-btn"
+                    onClick={tryClose}
+                    title="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <div className="modal-body">{children}</div>
+              {confirmClose && (
                 <div className="modal-confirm-cancel">
                   <span className="modal-confirm-cancel-text">
                     ¿Salir sin guardar los cambios?
@@ -2397,45 +2442,7 @@
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div className="modal-header">
-                  <span className="modal-title">{title}</span>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "6px",
-                      alignItems: "center",
-                    }}
-                  >
-                    {onDelete && (
-                      <button
-                        className="modal-icon-btn danger"
-                        onClick={onDelete}
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                    {onSave && (
-                      <button
-                        className="modal-icon-btn"
-                        onClick={onSave}
-                        title="Guardar"
-                      >
-                        💾
-                      </button>
-                    )}
-                    <button
-                      className="modal-icon-btn"
-                      onClick={tryClose}
-                      title="Cerrar"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
               )}
-              <div className="modal-body">{children}</div>
             </div>
           </div>,
           document.body,
@@ -2711,9 +2718,9 @@
       /* FASE 4 — AGENDA: CONSTANTES            */
       /* ═══════════════════════════════════════ */
       const AG_START = 8; // hora inicio grilla
-      const AG_END = 20; // hora fin grilla
+      const AG_END = 23; // hora fin grilla
       const AG_PX_H = 60; // px por hora
-      const AG_TOTAL = (AG_END - AG_START) * AG_PX_H; // 720px
+      const AG_TOTAL = (AG_END - AG_START) * AG_PX_H; // 900px (8→23h)
 
       const TIPO_COLORS = {
         individual: { bg: "#1E3A8A", text: "#FFFFFF", border: "#60A5FA" },
@@ -3108,7 +3115,7 @@
         return edad;
       }
 
-      /* Slots de 30 min para la grilla: 8:00, 8:30 … 19:30 */
+      /* Slots de 30 min para la grilla: 8:00, 8:30 … 22:30 */
       const AG_SLOTS = [];
       for (let h = AG_START; h < AG_END; h++) {
         AG_SLOTS.push(`${String(h).padStart(2, "0")}:00`);
@@ -3184,7 +3191,7 @@
         }
 
         return (
-          <div className="ag-wrap">
+          <div className="ag-wrap" style={{ '--ag-total-h': `${AG_TOTAL}px` }}>
             <div
               className="ag-grid"
               style={{
@@ -4126,29 +4133,6 @@
           >
             <div className="modal-card" style={{ maxWidth: "520px" }}>
               <div className="modal-bar" />
-              {confirmCancel ? (
-                <div className="modal-confirm-cancel">
-                  <span className="modal-confirm-cancel-text">
-                    ¿Salir sin guardar los cambios?
-                  </span>
-                  <div className="modal-confirm-cancel-btns">
-                    <button
-                      className="btn btn-danger"
-                      style={{ padding: "5px 14px", fontSize: "13px" }}
-                      onClick={doClose}
-                    >
-                      Sí, salir
-                    </button>
-                    <button
-                      className="btn btn-sec"
-                      style={{ padding: "5px 14px", fontSize: "13px" }}
-                      onClick={() => setConfirmCancel(false)}
-                    >
-                      No, quedarme
-                    </button>
-                  </div>
-                </div>
-              ) : (
                 <div className="modal-header">
                   <span className="modal-title">
                     {isEditar ? "Edición de turno" : "Creación de turno"}
@@ -4186,7 +4170,6 @@
                     </button>
                   </div>
                 </div>
-              )}
               <div className="modal-body">
                 {/* ─── 0. PACIENTE ─── */}
                 <div
@@ -5493,6 +5476,29 @@
                   </div>
                 </div>
               </div>
+              {confirmCancel && (
+                <div className="modal-confirm-cancel">
+                  <span className="modal-confirm-cancel-text">
+                    ¿Salir sin guardar los cambios?
+                  </span>
+                  <div className="modal-confirm-cancel-btns">
+                    <button
+                      className="btn btn-danger"
+                      style={{ padding: "5px 14px", fontSize: "13px" }}
+                      onClick={doClose}
+                    >
+                      Sí, salir
+                    </button>
+                    <button
+                      className="btn btn-sec"
+                      style={{ padding: "5px 14px", fontSize: "13px" }}
+                      onClick={() => setConfirmCancel(false)}
+                    >
+                      No, quedarme
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>,
           document.body,
@@ -5677,29 +5683,6 @@
           >
             <div className="modal-card" style={{ maxWidth: "440px" }}>
               <div className="modal-bar" />
-              {confirmCancel ? (
-                <div className="modal-confirm-cancel">
-                  <span className="modal-confirm-cancel-text">
-                    ¿Salir sin guardar los cambios?
-                  </span>
-                  <div className="modal-confirm-cancel-btns">
-                    <button
-                      className="btn btn-danger"
-                      style={{ padding: "5px 14px", fontSize: "13px" }}
-                      onClick={doClose}
-                    >
-                      Sí, salir
-                    </button>
-                    <button
-                      className="btn btn-sec"
-                      style={{ padding: "5px 14px", fontSize: "13px" }}
-                      onClick={() => setConfirmCancel(false)}
-                    >
-                      No, quedarme
-                    </button>
-                  </div>
-                </div>
-              ) : (
                 <div className="modal-header">
                   <span className="modal-title">
                     {isEditar ? "Editar reserva" : "Reservar horario"}
@@ -5736,7 +5719,6 @@
                     </button>
                   </div>
                 </div>
-              )}
               <div className="modal-body">
                 {/* COLOR DE ETIQUETA */}
                 <div style={{ marginBottom: "14px" }}>
@@ -5929,6 +5911,29 @@
                   </div>
                 </div>
               </div>
+              {confirmCancel && (
+                <div className="modal-confirm-cancel">
+                  <span className="modal-confirm-cancel-text">
+                    ¿Salir sin guardar los cambios?
+                  </span>
+                  <div className="modal-confirm-cancel-btns">
+                    <button
+                      className="btn btn-danger"
+                      style={{ padding: "5px 14px", fontSize: "13px" }}
+                      onClick={doClose}
+                    >
+                      Sí, salir
+                    </button>
+                    <button
+                      className="btn btn-sec"
+                      style={{ padding: "5px 14px", fontSize: "13px" }}
+                      onClick={() => setConfirmCancel(false)}
+                    >
+                      No, quedarme
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>,
           document.body,
@@ -6437,10 +6442,6 @@
 
         /* ── activar semana: carga turnos fijos y genera avisos flotantes ── */
         function activarSemana() {
-          if (semanaActivada) {
-            showToast("⚠️ Esta semana ya fue activada");
-            return;
-          }
           const allPacientes = getData("hgsp_pacientes").filter(
             (p) => p.activo,
           );
@@ -6519,8 +6520,10 @@
           setData("hgsp_sesiones", allSesiones);
           setData("hgsp_coord_pendientes", coord);
           const act = getData("hgsp_semanas_activadas") || [];
-          act.push(semanaKey);
-          setData("hgsp_semanas_activadas", act);
+          if (!act.includes(semanaKey)) {
+            act.push(semanaKey);
+            setData("hgsp_semanas_activadas", act);
+          }
           loadData();
           if (aCoordinar > 0) setShowCoord(true);
           showToast(
@@ -8067,25 +8070,7 @@
               {vista === "semanal" && (
                 <>
                   {/* Activar semana / Turnos fijos */}
-                  {semanaActivada ? (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "6px 14px",
-                        borderRadius: "50px",
-                        border: "2px solid rgba(125,204,144,.35)",
-                        background: "rgba(125,204,144,.08)",
-                        fontFamily: "var(--mono)",
-                        fontSize: "11px",
-                        color: "#7DCC90",
-                        fontWeight: 700,
-                      }}
-                    >
-                      ✓ Semana activada
-                    </span>
-                  ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <button
                       className="btn btn-g"
                       onClick={() => setModalConfirmActivar(true)}
@@ -8096,7 +8081,7 @@
                         gap: "6px",
                       }}
                     >
-                      🔃 CargarTurnos Fijos
+                      🔃 Cargar Turnos Fijos
                       {coordSemana.length > 0 && (
                         <span
                           style={{
@@ -8113,7 +8098,27 @@
                         </span>
                       )}
                     </button>
-                  )}
+
+                    {semanaActivada && (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "6px 14px",
+                          borderRadius: "50px",
+                          border: "2px solid rgba(125,204,144,.35)",
+                          background: "rgba(125,204,144,.08)",
+                          fontFamily: "var(--mono)",
+                          fontSize: "11px",
+                          color: "#7DCC90",
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✓ Semana activada
+                      </span>
+                    )}
+                  </div>
 
                   {/* Rango fecha — mes en dorado/negrita */}
                   <span
@@ -9033,29 +9038,6 @@
           >
             <div className="modal-card modal-lg">
               <div className="modal-bar"></div>
-              {confirmCancel ? (
-                <div className="modal-confirm-cancel">
-                  <span className="modal-confirm-cancel-text">
-                    ¿Salir sin guardar los cambios?
-                  </span>
-                  <div className="modal-confirm-cancel-btns">
-                    <button
-                      className="btn btn-danger"
-                      style={{ padding: "5px 14px", fontSize: "13px" }}
-                      onClick={doClose}
-                    >
-                      Sí, salir
-                    </button>
-                    <button
-                      className="btn btn-sec"
-                      style={{ padding: "5px 14px", fontSize: "13px" }}
-                      onClick={() => setConfirmCancel(false)}
-                    >
-                      No, quedarme
-                    </button>
-                  </div>
-                </div>
-              ) : (
                 <div className="modal-header">
                   <span className="modal-title">
                     {paciente ? "Editar paciente" : "Nuevo paciente"}
@@ -9083,7 +9065,6 @@
                     </button>
                   </div>
                 </div>
-              )}
 
               <div style={{ padding: "12px 22px 0" }}>
                 <Tabs
@@ -10010,6 +9991,29 @@
                   Guardar paciente
                 </button>
               </div>
+              {confirmCancel && (
+                <div className="modal-confirm-cancel">
+                  <span className="modal-confirm-cancel-text">
+                    ¿Salir sin guardar los cambios?
+                  </span>
+                  <div className="modal-confirm-cancel-btns">
+                    <button
+                      className="btn btn-danger"
+                      style={{ padding: "5px 14px", fontSize: "13px" }}
+                      onClick={doClose}
+                    >
+                      Sí, salir
+                    </button>
+                    <button
+                      className="btn btn-sec"
+                      style={{ padding: "5px 14px", fontSize: "13px" }}
+                      onClick={() => setConfirmCancel(false)}
+                    >
+                      No, quedarme
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>,
           document.body,
