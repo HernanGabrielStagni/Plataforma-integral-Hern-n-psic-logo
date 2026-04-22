@@ -622,8 +622,14 @@
         animation: confirm-slide-up 0.18s ease;
       }
       @keyframes confirm-slide-up {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
       .modal-confirm-cancel-text {
         color: rgba(255, 255, 255, 0.85);
@@ -1833,29 +1839,54 @@
         background: rgba(200, 146, 42, 0.22);
       }
       .ag-day-hd.feriado {
-        background: rgba(200, 146, 42, 0.12);
+        background: rgba(200, 146, 42, 0.08);
       }
-      .ag-day-hd.feriado .ag-day-num {
-        color: var(--do);
+      .ag-feriado-badge {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        background: var(--vm);
+        border-radius: 10px;
+        padding: 5px 10px 6px;
+        box-shadow:
+          0 0 0 2px var(--vc),
+          0 2px 8px rgba(45, 90, 61, 0.4);
+        min-width: 48px;
+        margin: 0 auto 2px;
+        gap: 1px;
       }
-      .feriado-badge {
+      .ag-feriado-badge .ag-day-abbr {
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 8px;
+      }
+      .ag-feriado-badge .ag-day-num {
+        color: #fff;
+        font-size: 20px;
+        font-weight: 700;
+        line-height: 1.1;
+      }
+      .ag-feriado-badge .feriado-nombre {
         font-family: var(--mono);
         font-size: 7px;
         color: var(--do);
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        opacity: 0.85;
-        line-height: 1;
+        line-height: 1.2;
+        text-align: center;
+        max-width: 60px;
+        white-space: normal;
+        word-break: break-word;
       }
       .ag-col.feriado-col {
-        background: rgba(200, 146, 42, 0.04);
+        background: rgba(45, 90, 61, 0.06);
       }
       .cal-cell.feriado {
-        background: rgba(200, 146, 42, 0.09);
-        border-color: rgba(200, 146, 42, 0.35);
+        background: rgba(45, 90, 61, 0.12);
+        border-color: rgba(45, 90, 61, 0.35);
       }
       .cal-cell.feriado .cal-num {
-        color: var(--do);
+        color: var(--vc);
+        font-weight: 700;
       }
       .ag-day-num {
         font-family: var(--serif);
@@ -2562,9 +2593,30 @@
       /* ═══════════════════════════════════════ */
       /* COMPONENTE: Topbar                     */
       /* ═══════════════════════════════════════ */
-      function Topbar({ activeSection, onNavigate, onNewTurno, onNewReserva }) {
+      function Topbar({
+        activeSection,
+        onNavigate,
+        onNewTurno,
+        onNewReserva,
+        prevWeek,
+        nextWeek,
+        goHoy,
+        vista,
+      }) {
         const current = NAV_SECTIONS.find((s) => s.id === activeSection);
         const topbarRef = useRef(null);
+        const [showReservaMenu, setShowReservaMenu] = React.useState(false);
+        const menuRef = useRef(null);
+
+        useEffect(() => {
+          if (!showReservaMenu) return;
+          function handleClick(e) {
+            if (menuRef.current && !menuRef.current.contains(e.target))
+              setShowReservaMenu(false);
+          }
+          document.addEventListener("mousedown", handleClick);
+          return () => document.removeEventListener("mousedown", handleClick);
+        }, [showReservaMenu]);
 
         useEffect(() => {
           const root = document.documentElement;
@@ -2644,14 +2696,162 @@
               </div>
 
               {activeSection === "agenda" && (
-                <div className="topbar-actions">
-                  <button className="topbar-cta" onClick={onNewReserva}>
-                    <span style={{ fontSize: "16px" }}>🔔</span> Reservar
-                    horario
-                  </button>
-                  <button className="topbar-cta primary" onClick={onNewTurno}>
-                    <span style={{ fontSize: "16px" }}>+</span> Nuevo turno
-                  </button>
+                <div
+                  className="topbar-actions"
+                  style={{ alignItems: "center", gap: "8px" }}
+                >
+                  {/* Nav semanal en topbar */}
+                  {vista === "semanal" && (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        borderRadius: "50px",
+                        border: "1px solid rgba(254, 179, 4, 0.95)",
+                        background: "rgba(58, 174, 20, 0.22)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <button
+                        onClick={prevWeek}
+                        title="Semana anterior"
+                        style={{
+                          width: "36px",
+                          height: "34px",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "16px",
+                          color: "var(--do)",
+                          lineHeight: 1,
+                        }}
+                      >
+                        🔙
+                      </button>
+                      <button
+                        onClick={goHoy}
+                        title="Ir a semana actual"
+                        style={{
+                          padding: "0 10px",
+                          height: "34px",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          fontFamily: "var(--sans)",
+                          fontWeight: 700,
+                          fontSize: "12px",
+                          color: "rgba(250, 248, 251, 0.9)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Semana actual
+                      </button>
+                      <button
+                        onClick={nextWeek}
+                        title="Semana siguiente"
+                        style={{
+                          width: "36px",
+                          height: "34px",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "16px",
+                          color: "var(--do)",
+                          lineHeight: 1,
+                        }}
+                      >
+                        🔜
+                      </button>
+                    </div>
+                  )}
+                  {/* Botón Crear reserva con dropdown */}
+                  <div style={{ position: "relative" }} ref={menuRef}>
+                    <button
+                      className="topbar-cta primary"
+                      onClick={() => setShowReservaMenu((v) => !v)}
+                    >
+                      <span style={{ fontSize: "14px" }}>+</span> Crear reserva
+                    </button>
+                    {showReservaMenu && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 8px)",
+                          right: 0,
+                          background: "var(--vd)",
+                          border: "2px solid var(--vm)",
+                          borderRadius: "16px",
+                          padding: "6px",
+                          minWidth: "190px",
+                          boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+                          zIndex: 200,
+                        }}
+                      >
+                        <button
+                          onClick={() => {
+                            setShowReservaMenu(false);
+                            onNewReserva();
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            width: "100%",
+                            background: "transparent",
+                            border: "none",
+                            padding: "10px 14px",
+                            borderRadius: "10px",
+                            cursor: "pointer",
+                            fontFamily: "var(--sans)",
+                            fontWeight: 600,
+                            fontSize: "13px",
+                            color: "rgba(255,255,255,.88)",
+                            textAlign: "left",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background =
+                              "rgba(255,255,255,.08)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          🔔 Reservar horario
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowReservaMenu(false);
+                            onNewTurno();
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            width: "100%",
+                            background: "transparent",
+                            border: "none",
+                            padding: "10px 14px",
+                            borderRadius: "10px",
+                            cursor: "pointer",
+                            fontFamily: "var(--sans)",
+                            fontWeight: 600,
+                            fontSize: "13px",
+                            color: "rgba(255,255,255,.88)",
+                            textAlign: "left",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background =
+                              "rgba(255,255,255,.08)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          📅 Nuevo turno
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -3191,7 +3391,7 @@
         }
 
         return (
-          <div className="ag-wrap" style={{ '--ag-total-h': `${AG_TOTAL}px` }}>
+          <div className="ag-wrap" style={{ "--ag-total-h": `${AG_TOTAL}px` }}>
             <div
               className="ag-grid"
               style={{
@@ -3215,6 +3415,17 @@
                         <div className="ag-day-abbr">{DIAS_HD[i]}</div>
                         <div className="ag-day-num">{d.getDate()}</div>
                       </div>
+                    ) : fInfo ? (
+                      <div className="ag-feriado-badge">
+                        <div className="ag-day-abbr">{DIAS_HD[i]}</div>
+                        <div className="ag-day-num">{d.getDate()}</div>
+                        <div className="feriado-nombre">
+                          ⭐{" "}
+                          {fInfo.nombre.length > 14
+                            ? fInfo.nombre.slice(0, 14) + "…"
+                            : fInfo.nombre}
+                        </div>
+                      </div>
                     ) : (
                       <>
                         <div className="ag-day-abbr">{DIAS_HD[i]}</div>
@@ -3224,7 +3435,6 @@
                     <div className="ag-day-mes">
                       {MESES_CORTO[d.getMonth()]}
                     </div>
-                    {fInfo && <div className="feriado-badge">⭐</div>}
                   </div>
                 );
               })}
@@ -3717,24 +3927,42 @@
       /* ═══════════════════════════════════════ */
       /* Retorna los campos de pago por defecto según el paciente */
       function pagoDesde(pac) {
+        const cfg = getData("hgsp_config") || {};
         const esOS =
           pac && (pac.cobertura === "obra_social" || pac.cobertura === "mixto");
+        /* Importe particular: usa el del paciente, sino cae en config global */
+        const montoPartDefault =
+          (pac ? Number(pac.valorParticular) || 0 : 0) ||
+          Number(cfg.valorSesionParticular) ||
+          "";
+        /* Coseguro: usa el del paciente; si OS tiene tarifa en config, también aplica */
+        const coseguroDefault = (() => {
+          if (pac && Number(pac.coseguro)) return Number(pac.coseguro);
+          if (pac && esOS && pac.obraSocial) {
+            const osEnCfg = (cfg.obrasSociales || []).find(
+              (o) => o.nombre === pac.obraSocial,
+            );
+            if (osEnCfg && Number(osEnCfg.valorCoseguro))
+              return Number(osEnCfg.valorCoseguro);
+          }
+          return "";
+        })();
         return {
           modalidadPago: esOS ? "obra_social" : "particular",
-          montoParticular: pac ? pac.valorParticular || "" : "",
+          montoParticular: montoPartDefault,
           particularAbonado: false,
           metodoPagoParticular: "efectivo",
-          coseguroMonto: pac ? pac.coseguro || "" : "",
+          coseguroMonto: coseguroDefault,
           coseguroAbonado: false,
           metodoPagoOS: "efectivo",
           ordenEmitida: false,
           ordenFirmada: false,
           /* Cobro por cancelación / reprogramación */
           cobroCancel: false,
-          cancelEfectivo: false, // cobra en efectivo/transfer
-          montoCancel: pac ? pac.valorParticular || "" : "",
+          cancelEfectivo: false,
+          montoCancel: montoPartDefault,
           cancelAbonado: false,
-          cancelOrden: false, // cobra con orden OS
+          cancelOrden: false,
           cancelOrdenToken: "",
           cancelOrdenSaldada: false,
         };
@@ -4133,43 +4361,43 @@
           >
             <div className="modal-card" style={{ maxWidth: "520px" }}>
               <div className="modal-bar" />
-                <div className="modal-header">
-                  <span className="modal-title">
-                    {isEditar ? "Edición de turno" : "Creación de turno"}
-                  </span>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "6px",
-                      alignItems: "center",
-                      flexShrink: 0,
-                    }}
+              <div className="modal-header">
+                <span className="modal-title">
+                  {isEditar ? "Edición de turno" : "Creación de turno"}
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    alignItems: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {isEditar && (
+                    <button
+                      className="modal-icon-btn danger"
+                      onClick={() => onDelete(f)}
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                  <button
+                    className="modal-icon-btn"
+                    onClick={handleSave}
+                    title="Guardar"
                   >
-                    {isEditar && (
-                      <button
-                        className="modal-icon-btn danger"
-                        onClick={() => onDelete(f)}
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                    <button
-                      className="modal-icon-btn"
-                      onClick={handleSave}
-                      title="Guardar"
-                    >
-                      💾
-                    </button>
-                    <button
-                      className="modal-icon-btn"
-                      onClick={tryClose}
-                      title="Cerrar"
-                    >
-                      ✕
-                    </button>
-                  </div>
+                    💾
+                  </button>
+                  <button
+                    className="modal-icon-btn"
+                    onClick={tryClose}
+                    title="Cerrar"
+                  >
+                    ✕
+                  </button>
                 </div>
+              </div>
               <div className="modal-body">
                 {/* ─── 0. PACIENTE ─── */}
                 <div
@@ -5683,42 +5911,42 @@
           >
             <div className="modal-card" style={{ maxWidth: "440px" }}>
               <div className="modal-bar" />
-                <div className="modal-header">
-                  <span className="modal-title">
-                    {isEditar ? "Editar reserva" : "Reservar horario"}
-                  </span>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "6px",
-                      alignItems: "center",
-                    }}
+              <div className="modal-header">
+                <span className="modal-title">
+                  {isEditar ? "Editar reserva" : "Reservar horario"}
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    alignItems: "center",
+                  }}
+                >
+                  {isEditar && (
+                    <button
+                      className="modal-icon-btn danger"
+                      onClick={() => onDelete(f)}
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                  <button
+                    className="modal-icon-btn"
+                    onClick={handleSave}
+                    title="Guardar"
                   >
-                    {isEditar && (
-                      <button
-                        className="modal-icon-btn danger"
-                        onClick={() => onDelete(f)}
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                    <button
-                      className="modal-icon-btn"
-                      onClick={handleSave}
-                      title="Guardar"
-                    >
-                      💾
-                    </button>
-                    <button
-                      className="modal-icon-btn"
-                      onClick={tryClose}
-                      title="Cerrar"
-                    >
-                      ✕
-                    </button>
-                  </div>
+                    💾
+                  </button>
+                  <button
+                    className="modal-icon-btn"
+                    onClick={tryClose}
+                    title="Cerrar"
+                  >
+                    ✕
+                  </button>
                 </div>
+              </div>
               <div className="modal-body">
                 {/* COLOR DE ETIQUETA */}
                 <div style={{ marginBottom: "14px" }}>
@@ -5948,9 +6176,11 @@
         setModalTurno,
         modalReserva,
         setModalReserva,
+        baseDate,
+        setBaseDate,
+        vista,
+        setVista,
       }) {
-        const [vista, setVista] = useState("semanal");
-        const [baseDate, setBaseDate] = useState(new Date());
         const [showWeekend, setShowWeekend] = useState(false);
         const [sesiones, setSesiones] = useState([]);
         const [pacientes, setPacientes] = useState([]);
@@ -6032,20 +6262,6 @@
         /* ── navegación semanal ── */
         const weekDates = getWeekDates(baseDate);
         const hoyStr = dateStr(new Date());
-
-        function prevWeek() {
-          const d = new Date(baseDate);
-          d.setDate(d.getDate() - 7);
-          setBaseDate(d);
-        }
-        function nextWeek() {
-          const d = new Date(baseDate);
-          d.setDate(d.getDate() + 7);
-          setBaseDate(d);
-        }
-        function goHoy() {
-          setBaseDate(new Date());
-        }
 
         /* ── stats semana ── */
         const weekStrs = weekDates.map((d) => dateStr(d));
@@ -7982,95 +8198,18 @@
                     </button>
                   )}
                 </div>
-
-                {/* Nav semana */}
-                {vista === "semanal" && (
-                  <div
-                    className="agenda-primary-today"
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      width: "100%",
-                    }}
-                  >
-                    {/* ‹ Hoy › */}
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        width: "100%",
-                        minWidth: "100%",
-                        borderRadius: "999px",
-                        border: "2px solid #d7cab1",
-                        overflow: "hidden",
-                        background: "#f7f1e5",
-                        boxShadow: "0 2px 4px rgba(112,88,41,.08)",
-                      }}
-                    >
-                      <button
-                        onClick={prevWeek}
-                        title="Semana anterior"
-                        style={{
-                          width: "42px",
-                          height: "32px",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          fontWeight: 900,
-                          fontSize: "18px",
-                          color: "var(--do)",
-                          lineHeight: 1,
-                          fontFamily: "sans-serif",
-                        }}
-                      >
-                        ‹
-                      </button>
-                      <button
-                        onClick={goHoy}
-                        title="Ir a hoy"
-                        style={{
-                          flex: 1,
-                          minHeight: "38px",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          fontFamily: "var(--sans)",
-                          fontWeight: 700,
-                          fontSize: "15px",
-                          color: "#3f3a32",
-                          lineHeight: 1,
-                        }}
-                      >
-                        Semana Actual
-                      </button>
-                      <button
-                        onClick={nextWeek}
-                        title="Semana siguiente"
-                        style={{
-                          width: "42px",
-                          height: "32px",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          fontWeight: 900,
-                          fontSize: "18px",
-                          color: "var(--do)",
-                          lineHeight: 1,
-                          fontFamily: "sans-serif",
-                        }}
-                      >
-                        ›
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {vista === "semanal" && (
                 <>
                   {/* Activar semana / Turnos fijos */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
                     <button
                       className="btn btn-g"
                       onClick={() => setModalConfirmActivar(true)}
@@ -9038,33 +9177,33 @@
           >
             <div className="modal-card modal-lg">
               <div className="modal-bar"></div>
-                <div className="modal-header">
-                  <span className="modal-title">
-                    {paciente ? "Editar paciente" : "Nuevo paciente"}
-                  </span>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "6px",
-                      alignItems: "center",
-                    }}
+              <div className="modal-header">
+                <span className="modal-title">
+                  {paciente ? "Editar paciente" : "Nuevo paciente"}
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    className="modal-icon-btn"
+                    onClick={handleSave}
+                    title="Guardar"
                   >
-                    <button
-                      className="modal-icon-btn"
-                      onClick={handleSave}
-                      title="Guardar"
-                    >
-                      💾
-                    </button>
-                    <button
-                      className="modal-icon-btn"
-                      onClick={tryClose}
-                      title="Cerrar"
-                    >
-                      ✕
-                    </button>
-                  </div>
+                    💾
+                  </button>
+                  <button
+                    className="modal-icon-btn"
+                    onClick={tryClose}
+                    title="Cerrar"
+                  >
+                    ✕
+                  </button>
                 </div>
+              </div>
 
               <div style={{ padding: "12px 22px 0" }}>
                 <Tabs
@@ -17929,8 +18068,28 @@
         const [badgeCounts, setBadgeCounts] = useState({});
         const [modalTurno, setModalTurno] = useState(null);
         const [modalReserva, setModalReserva] = useState(null);
+        const [baseDate, setBaseDate] = useState(new Date());
+        const [vista, setVista] = useState("semanal");
 
         const hoyStr = new Date().toISOString().slice(0, 10);
+
+        function prevWeek() {
+          setBaseDate((d) => {
+            const n = new Date(d);
+            n.setDate(n.getDate() - 7);
+            return n;
+          });
+        }
+        function nextWeek() {
+          setBaseDate((d) => {
+            const n = new Date(d);
+            n.setDate(n.getDate() + 7);
+            return n;
+          });
+        }
+        function goHoy() {
+          setBaseDate(new Date());
+        }
 
         useEffect(() => {
           setBadgeCounts(computeBadges());
@@ -17942,6 +18101,10 @@
             setModalTurno,
             modalReserva,
             setModalReserva,
+            baseDate,
+            setBaseDate,
+            vista,
+            setVista,
           };
           switch (activeSection) {
             case "agenda":
@@ -17981,6 +18144,10 @@
               onNewReserva={() =>
                 setModalReserva({ reserva: null, fecha: hoyStr, hora: "10:00" })
               }
+              prevWeek={prevWeek}
+              nextWeek={nextWeek}
+              goHoy={goHoy}
+              vista={vista}
             />
             <div className="app-layout">
               <Sidebar
