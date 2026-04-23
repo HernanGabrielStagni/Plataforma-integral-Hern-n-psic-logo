@@ -4418,7 +4418,28 @@
             : cobradoOS
               ? Number(f.coseguroMonto) || 0
               : 0;
-          return { ...f, cobrado, montoCobrado, ...extras };
+
+          /* Normalizar campos de cancelación según tipo de paciente.
+             Evita artifacts de migración v1→v2: un paciente PARTICULAR que
+             antes tenía cancelEfectivo=true no debe quedar con cancelCoseguro=true
+             en localStorage, ya que eso genera falsos positivos en tienePendientePago. */
+          const cancelNorm = {};
+          if (f.cobroCancel) {
+            if (pacienteConOS) {
+              // Paciente con OS: limpiar campos de "particular" (no aplica)
+              cancelNorm.cancelParticularMonto = 0;
+              cancelNorm.cancelParticularAbonado = false;
+            } else {
+              // Paciente particular (sin OS): limpiar campos de OS (no aplica)
+              cancelNorm.cancelCoseguro = false;
+              cancelNorm.cancelCoseguroPagado = false;
+              cancelNorm.cancelCoseguroMonto = 0;
+              cancelNorm.cancelOrdenOS = false;
+              cancelNorm.cancelOrdenEmitida = false;
+            }
+          }
+
+          return { ...f, cobrado, montoCobrado, ...cancelNorm, ...extras };
         }
 
         function handleSave() {
@@ -4791,9 +4812,9 @@
 
                 {/* ─── FECHA + HORARIO (siempre visible) ─── */}
                 <div className="mt-always-row">
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, textAlign: "center" }}>
                     {/* Label = día de la semana, reactivo al cambiar la fecha */}
-                    <div className="modal-label" style={{ color: "var(--do)", textTransform: "capitalize", letterSpacing: ".03em" }}>
+                    <div className="modal-label" style={{ color: "var(--do)", textTransform: "capitalize", letterSpacing: ".03em", fontSize: "20px" }}>
                       {f.fecha
                         ? new Date(f.fecha + "T12:00").toLocaleDateString("es-AR", { weekday: "long" })
                         : "Fecha"}
@@ -4801,7 +4822,7 @@
                     <input
                       className="modal-input"
                       type="date"
-                      style={{ fontFamily: "var(--mono)", width: "100%", boxSizing: "border-box" }}
+                      style={{ fontFamily: "var(--mono)", width: "100%", boxSizing: "border-box", textAlign: "center" }}
                       value={f.fecha || ""}
                       onChange={(e) => {
                         const nuevaFecha = e.target.value;
@@ -4819,14 +4840,14 @@
                       }}
                     />
                   </div>
-                  <div>
-                    <div className="modal-label">Inicio</div>
+                  <div style={{ textAlign: "center" }}>
+                    <div className="modal-label" style={{ textAlign: "center" }}>Inicio</div>
                     <input
                       className="modal-input"
                       type="time"
                       min={HORA_MIN}
                       max={HORA_MAX}
-                      style={{ fontFamily: "var(--mono)" }}
+                      style={{ fontFamily: "var(--mono)", textAlign: "center" }}
                       value={f.horaInicio || ""}
                       onChange={(e) => {
                         upd("horaInicio", e.target.value);
@@ -4834,14 +4855,14 @@
                       }}
                     />
                   </div>
-                  <div>
-                    <div className="modal-label">Fin</div>
+                  <div style={{ textAlign: "center" }}>
+                    <div className="modal-label" style={{ textAlign: "center" }}>Fin</div>
                     <input
                       className="modal-input"
                       type="time"
                       min={HORA_MIN}
                       max={HORA_MAX}
-                      style={{ fontFamily: "var(--mono)" }}
+                      style={{ fontFamily: "var(--mono)", textAlign: "center" }}
                       value={f.horaFin || ""}
                       onChange={(e) => upd("horaFin", e.target.value)}
                     />
