@@ -1830,6 +1830,7 @@
         padding: 10px 6px;
         text-align: center;
         border-right: 1px solid rgba(255, 255, 255, 0.08);
+        position: relative;
       }
       .ag-day-hd:last-child {
         border-right: none;
@@ -2960,10 +2961,11 @@
         { v: "otro", l: "Otro", icon: "✏️" },
       ];
       const ESTADO_ICONS = {
-        asistio: "✅",
-        cancelo: "❌",
-        pendiente: "⏳",
-        reprogramo: "🔄",
+        asistio:      "✅",
+        cancelo:      "❌",
+        inasistencia: "🚫",
+        pendiente:    "⏳",
+        reprogramo:   "🔄",
       };
 
       /* Helper: detecta si un turno tiene pendientes de cobro/orden */
@@ -2971,20 +2973,26 @@
       function tienePendientePago(s, hoy) {
         if (s.tipo === "AT") return false;
         if (s.tipo === "reserva_personal") return false;
-        // Cobro por cancelación / reprogramación pendiente
+        // Cobro por cancelación / reprogramación / inasistencia pendiente
         if (
-          (s.estado === "cancelo" || s.estado === "reprogramo") &&
+          (s.estado === "cancelo" || s.estado === "reprogramo" || s.estado === "inasistencia") &&
           s.cobroCancel
         ) {
-          // esquema nuevo (campos independientes)
+          // Esquema nuevo (campos independientes v2)
+          if (s.cancelCoseguro !== undefined || s.cancelOrdenOS !== undefined || s.cancelParticularMonto !== undefined) {
+            if (s.cancelCoseguro && !s.cancelCoseguroPagado) return true;
+            if (s.cancelOrdenOS && !s.cancelOrdenEmitida) return true;
+            const mPart = Number(s.cancelParticularMonto) || 0;
+            if (mPart > 0 && !s.cancelParticularAbonado) return true;
+            return false;
+          }
+          // Esquema anterior (campos v1 — compat legado)
           if (s.cancelEfectivo && !s.cancelAbonado) return true;
           if (s.cancelOrden && !s.cancelOrdenSaldada) return true;
-          // compat legado (campo cancelMetodo)
           if (!s.cancelEfectivo && !s.cancelOrden) {
-            if (s.cancelMetodo === "orden_os" && !s.cancelOrdenSaldada)
-              return true;
-            if (s.cancelMetodo === "efectivo_transfer" && !s.cancelAbonado)
-              return true;
+            if (s.cancelMetodo === "orden_os" && !s.cancelOrdenSaldada) return true;
+            if (s.cancelMetodo === "efectivo_transfer" && !s.cancelAbonado) return true;
+            return true; // cobroCancel sin detalles → pendiente por defecto
           }
         }
         // Sesión asistida — esquema nuevo
@@ -3026,42 +3034,60 @@
        campo = clave de la sesión que hay que setear a true para resolverlo */
       function descPendiente(s, pacNombre, hoy) {
         const items = [];
-        // Cancelación / reprogramación con cobro pendiente
+        // Cancelación / reprogramación / inasistencia con cobro pendiente
         if (
-          (s.estado === "cancelo" || s.estado === "reprogramo") &&
+          (s.estado === "cancelo" || s.estado === "reprogramo" || s.estado === "inasistencia") &&
           s.cobroCancel
         ) {
-          const te = s.estado === "cancelo" ? "cancelación" : "reprogramación";
-          // Esquema nuevo
-          if (s.cancelEfectivo && !s.cancelAbonado) {
-            const m = Number(s.montoCancel) || 0;
-            items.push({
-              texto: `Cobro efectivo por ${te}${m ? ` ($${m.toLocaleString("es-AR")})` : ""} · no abonado`,
-              campo: "cancelAbonado",
-            });
-          }
-          if (s.cancelOrden && !s.cancelOrdenSaldada) {
-            items.push({
-              texto: `Orden OS por ${te} · token pendiente`,
-              campo: "cancelOrdenSaldada",
-            });
-          }
-          // Compat legado
-          if (!s.cancelEfectivo && !s.cancelOrden) {
-            if (s.cancelMetodo === "orden_os" && !s.cancelOrdenSaldada)
+          const te = s.estado === "cancelo" ? "cancelación"
+            : s.estado === "inasistencia" ? "inasistencia"
+            : "reprogramación";
+          // Esquema nuevo v2 (campos independientes)
+          if (s.cancelCoseguro !== undefined || s.cancelOrdenOS !== undefined || s.cancelParticularMonto !== undefined) {
+            if (s.cancelCoseguro && !s.cancelCoseguroPagado) {
+              const m = Number(s.cancelCoseguroMonto) || 0;
               items.push({
-                texto: `Orden OS por ${te} · pendiente de token`,
-                campo: "cancelOrdenSaldada",
+                texto: `Coseguro por ${te}${m ? ` ($${m.toLocaleString("es-AR")})` : ""} · no abonado`,
+                campo: "cancelCoseguroPagado",
               });
-            else if (
-              s.cancelMetodo === "efectivo_transfer" &&
-              !s.cancelAbonado
-            ) {
+            }
+            if (s.cancelOrdenOS && !s.cancelOrdenEmitida) {
+              items.push({
+                texto: `Orden OS por ${te} · pendiente de emitir`,
+                campo: "cancelOrdenEmitida",
+              });
+            }
+            const mPart = Number(s.cancelParticularMonto) || 0;
+            if (mPart > 0 && !s.cancelParticularAbonado) {
+              items.push({
+                texto: `Cobro particular por ${te} ($${mPart.toLocaleString("es-AR")}) · no abonado`,
+                campo: "cancelParticularAbonado",
+              });
+            }
+          } else {
+            // Esquema legado v1
+            if (s.cancelEfectivo && !s.cancelAbonado) {
               const m = Number(s.montoCancel) || 0;
               items.push({
-                texto: `Cobro por ${te} pendiente${m ? ` ($${m.toLocaleString("es-AR")})` : ""}`,
+                texto: `Cobro por ${te}${m ? ` ($${m.toLocaleString("es-AR")})` : ""} · no abonado`,
                 campo: "cancelAbonado",
               });
+            }
+            if (s.cancelOrden && !s.cancelOrdenSaldada) {
+              items.push({
+                texto: `Orden OS por ${te} · token pendiente`,
+                campo: "cancelOrdenSaldada",
+              });
+            }
+            if (!s.cancelEfectivo && !s.cancelOrden) {
+              if (s.cancelMetodo === "orden_os" && !s.cancelOrdenSaldada)
+                items.push({ texto: `Orden OS por ${te} · pendiente de token`, campo: "cancelOrdenSaldada" });
+              else if (s.cancelMetodo === "efectivo_transfer" && !s.cancelAbonado) {
+                const m = Number(s.montoCancel) || 0;
+                items.push({ texto: `Cobro por ${te} pendiente${m ? ` ($${m.toLocaleString("es-AR")})` : ""}`, campo: "cancelAbonado" });
+              } else {
+                items.push({ texto: `Cobro por ${te} · pendiente de detallar`, campo: "cobroCancel" });
+              }
             }
           }
         }
@@ -3364,6 +3390,210 @@
         return out;
       }
 
+      /* ═══════════════════════════════════════ */
+      /* PANEL DÍA — vista condensada del día   */
+      /* ═══════════════════════════════════════ */
+      function PanelDia({ fecha, sesiones, pacientes, onClose, onEditar }) {
+        const ESTADOS_LABEL = {
+          pendiente:    { label: "Pendiente",    bg: "#7A5200", color: "#FDEAAA" },
+          asistio:      { label: "Asistió",      bg: "#1E3D2B", color: "#A8DDB8" },
+          cancelo:      { label: "Canceló",      bg: "#7A2800", color: "#FFD0B8" },
+          inasistencia: { label: "Inasistencia", bg: "#6B1515", color: "#FFD0D0" },
+          reprogramo:   { label: "Reprogramó",   bg: "#3A4A7A", color: "#C8D8FF" },
+        };
+
+        const fechaDate = new Date(fecha + "T12:00");
+        const titulo = fechaDate.toLocaleDateString("es-AR", {
+          weekday: "long", day: "2-digit", month: "2-digit", year: "numeric",
+        });
+        const tituloFmt = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+
+        const daySes = sesiones
+          .filter((s) => s.fecha === fecha && s.tipo !== "reserva_personal")
+          .sort((a, b) => (a.horaInicio || "").localeCompare(b.horaInicio || ""));
+
+        return ReactDOM.createPortal(
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(30,61,43,.55)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1200,
+          }} onClick={onClose}>
+            <div style={{
+              background: "var(--vd)", border: "2px solid var(--vm)",
+              borderRadius: "var(--r)", width: "min(680px,95vw)", maxHeight: "80vh",
+              display: "flex", flexDirection: "column", overflow: "hidden",
+            }} onClick={(e) => e.stopPropagation()}>
+              {/* barra dorada */}
+              <div style={{ height: "4px", background: "linear-gradient(90deg,var(--do),#E8B84B)", flexShrink: 0 }} />
+              {/* header */}
+              <div style={{ padding: "18px 22px 12px", borderBottom: "1px solid rgba(200,146,42,.2)", flexShrink: 0 }}>
+                <div style={{ fontFamily: "var(--serif)", fontSize: "18px", color: "var(--do)", fontWeight: 700 }}>
+                  📅 Turnos del {tituloFmt}
+                </div>
+              </div>
+              {/* cuerpo */}
+              <div style={{ overflowY: "auto", padding: "12px 22px", flex: 1 }}>
+                {daySes.length === 0 ? (
+                  <div style={{ color: "rgba(255,255,255,.5)", fontFamily: "var(--sans)", fontSize: "14px", padding: "20px 0", textAlign: "center" }}>
+                    Sin turnos registrados para este día.
+                  </div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "rgba(255,255,255,.06)" }}>
+                        {["Hora", "Paciente", "Tipo", "Estado", "Monto", ""].map((h) => (
+                          <th key={h} style={{ fontFamily: "var(--mono)", fontSize: "10px", color: "rgba(255,255,255,.45)", textTransform: "uppercase", letterSpacing: ".07em", padding: "7px 8px", textAlign: "left", fontWeight: 600 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {daySes.map((s) => {
+                        const pac = pacientes.find((p) => p.id === s.pacienteId);
+                        const nombre = pac ? `${pac.nombre} ${pac.apellido}` : "—";
+                        const est = ESTADOS_LABEL[s.estado] || ESTADOS_LABEL.pendiente;
+                        const monto = s.montoCobrado ? `$${Number(s.montoCobrado).toLocaleString("es-AR")}` : (s.montoParticular ? `$${Number(s.montoParticular).toLocaleString("es-AR")}` : "—");
+                        return (
+                          <tr key={s.id} style={{ borderBottom: "1px solid rgba(255,255,255,.07)" }}>
+                            <td style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "rgba(255,255,255,.7)", padding: "8px 8px", whiteSpace: "nowrap" }}>
+                              {s.horaInicio || "?"} – {s.horaFin || "?"}
+                            </td>
+                            <td style={{ fontFamily: "var(--sans)", fontSize: "13px", color: "var(--do)", padding: "8px 8px", fontWeight: 600 }}>{nombre}</td>
+                            <td style={{ fontFamily: "var(--sans)", fontSize: "12px", color: "rgba(255,255,255,.6)", padding: "8px 8px", textTransform: "capitalize" }}>{s.tipo || "—"}</td>
+                            <td style={{ padding: "8px 8px" }}>
+                              <span style={{ background: est.bg, color: est.color, borderRadius: "50px", padding: "3px 10px", fontSize: "11px", fontWeight: 700, fontFamily: "var(--sans)", whiteSpace: "nowrap" }}>
+                                {est.label}
+                              </span>
+                            </td>
+                            <td style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "rgba(255,255,255,.7)", padding: "8px 8px", whiteSpace: "nowrap" }}>{monto}</td>
+                            <td style={{ padding: "8px 4px" }}>
+                              <button onClick={() => { onClose(); onEditar(s); }} style={{ background: "rgba(200,146,42,.15)", border: "1px solid rgba(200,146,42,.3)", borderRadius: "50px", color: "var(--do)", fontSize: "12px", padding: "4px 12px", cursor: "pointer", fontFamily: "var(--sans)", fontWeight: 600 }}>
+                                ✏️ Editar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              {/* pie */}
+              <div style={{ padding: "12px 22px", borderTop: "1px solid rgba(200,146,42,.2)", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+                <button onClick={onClose} style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "50px", color: "rgba(255,255,255,.8)", fontSize: "13px", padding: "7px 20px", cursor: "pointer", fontFamily: "var(--sans)", fontWeight: 600 }}>
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      }
+
+      /* ═══════════════════════════════════════════ */
+      /* PANEL ANOMALÍAS — turnos fuera de rango    */
+      /* ═══════════════════════════════════════════ */
+      function PanelAnomalias({ fecha, sesiones, pacientes, onClose, onEditar, onEliminar }) {
+        const fechaDate = new Date(fecha + "T12:00");
+        const titulo = fechaDate.toLocaleDateString("es-AR", {
+          weekday: "long", day: "2-digit", month: "2-digit",
+        });
+        const tituloFmt = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+
+        const anomalas = sesiones
+          .filter((s) => s.fecha === fecha && (
+            (s.horaInicio && s.horaInicio < "07:00") ||
+            (s.horaFin && s.horaFin > "22:00")
+          ))
+          .sort((a, b) => (a.horaInicio || "").localeCompare(b.horaInicio || ""));
+
+        const [confirmarId, setConfirmarId] = React.useState(null);
+
+        return ReactDOM.createPortal(
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(30,61,43,.55)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1300,
+          }} onClick={onClose}>
+            <div style={{
+              background: "var(--vd)", border: "2px solid #C05020",
+              borderRadius: "var(--r)", width: "min(600px,95vw)", maxHeight: "70vh",
+              display: "flex", flexDirection: "column", overflow: "hidden",
+            }} onClick={(e) => e.stopPropagation()}>
+              {/* barra naranja */}
+              <div style={{ height: "4px", background: "linear-gradient(90deg,#E07030,#F0A060)", flexShrink: 0 }} />
+              {/* header */}
+              <div style={{ padding: "16px 22px 10px", borderBottom: "1px solid rgba(200,80,32,.25)", flexShrink: 0 }}>
+                <div style={{ fontFamily: "var(--serif)", fontSize: "17px", color: "#F0A060", fontWeight: 700 }}>
+                  ⚠️ Turnos fuera de rango — {tituloFmt}
+                </div>
+                <div style={{ fontFamily: "var(--sans)", fontSize: "12px", color: "rgba(255,255,255,.45)", marginTop: "3px" }}>
+                  Estos turnos tienen horarios fuera del rango permitido (07:00 – 22:00)
+                </div>
+              </div>
+              {/* lista */}
+              <div style={{ overflowY: "auto", padding: "12px 22px", flex: 1 }}>
+                {anomalas.map((s) => {
+                  const pac = pacientes.find((p) => p.id === s.pacienteId);
+                  const nombre = pac ? `${pac.nombre} ${pac.apellido}` : "Paciente desconocido";
+                  return (
+                    <div key={s.id} style={{
+                      background: "rgba(200,80,32,.12)", border: "1px solid rgba(200,80,32,.3)",
+                      borderRadius: "12px", padding: "12px 16px", marginBottom: "10px",
+                      display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap",
+                    }}>
+                      <div style={{ flex: 1, minWidth: "120px" }}>
+                        <div style={{ fontFamily: "var(--sans)", fontSize: "13px", color: "var(--do)", fontWeight: 700 }}>{nombre}</div>
+                        <div style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "rgba(255,255,255,.6)", marginTop: "2px" }}>
+                          {s.horaInicio || "?"} – {s.horaFin || "?"}
+                          {s.horaInicio && s.horaInicio < "07:00" && <span style={{ color: "#F0A060", marginLeft: "8px" }}>inicio antes de 07:00</span>}
+                          {s.horaFin && s.horaFin > "22:00" && <span style={{ color: "#F0A060", marginLeft: "8px" }}>fin después de 22:00</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                        <button onClick={() => { onClose(); onEditar(s); }} style={{
+                          background: "rgba(200,146,42,.15)", border: "1px solid rgba(200,146,42,.35)",
+                          borderRadius: "50px", color: "var(--do)", fontSize: "12px",
+                          padding: "5px 14px", cursor: "pointer", fontFamily: "var(--sans)", fontWeight: 600,
+                        }}>✏️ Editar</button>
+                        {confirmarId === s.id ? (
+                          <>
+                            <button onClick={() => { onEliminar(s); setConfirmarId(null); }} style={{
+                              background: "rgba(180,40,10,.35)", border: "1px solid rgba(220,80,40,.5)",
+                              borderRadius: "50px", color: "#FFD0B8", fontSize: "12px",
+                              padding: "5px 14px", cursor: "pointer", fontFamily: "var(--sans)", fontWeight: 700,
+                            }}>Confirmar</button>
+                            <button onClick={() => setConfirmarId(null)} style={{
+                              background: "transparent", border: "1px solid rgba(255,255,255,.15)",
+                              borderRadius: "50px", color: "rgba(255,255,255,.5)", fontSize: "12px",
+                              padding: "5px 12px", cursor: "pointer", fontFamily: "var(--sans)",
+                            }}>No</button>
+                          </>
+                        ) : (
+                          <button onClick={() => setConfirmarId(s.id)} style={{
+                            background: "transparent", border: "1px solid rgba(200,80,32,.4)",
+                            borderRadius: "50px", color: "#F09080", fontSize: "12px",
+                            padding: "5px 14px", cursor: "pointer", fontFamily: "var(--sans)", fontWeight: 600,
+                          }}>🗑 Eliminar</button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* pie */}
+              <div style={{ padding: "10px 22px", borderTop: "1px solid rgba(200,80,32,.2)", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+                <button onClick={onClose} style={{
+                  background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)",
+                  borderRadius: "50px", color: "rgba(255,255,255,.8)", fontSize: "13px",
+                  padding: "7px 20px", cursor: "pointer", fontFamily: "var(--sans)", fontWeight: 600,
+                }}>Cerrar</button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      }
+
       function AgendaGridSemanal({
         weekDates,
         sesiones,
@@ -3373,6 +3603,9 @@
         onCellClick,
         onSessionClick,
         dailyTotals,
+        onDayClick,
+        onAnomaliaClick,
+        anomaliasPorDia,
       }) {
         function getPac(id) {
           return pacientes.find((p) => p.id === id);
@@ -3408,7 +3641,9 @@
                   <div
                     key={i}
                     className={`ag-day-hd ${isToday ? "today" : ""} ${fInfo ? "feriado" : ""}`}
-                    title={fInfo ? fInfo.nombre : ""}
+                    title={fInfo ? fInfo.nombre : "Ver turnos del día"}
+                    onClick={() => onDayClick && onDayClick(ds)}
+                    style={{ cursor: "pointer" }}
                   >
                     {isToday ? (
                       <div className="ag-today-badge">
@@ -3435,6 +3670,22 @@
                     <div className="ag-day-mes">
                       {MESES_CORTO[d.getMonth()]}
                     </div>
+                    {anomaliasPorDia && anomaliasPorDia[ds] && anomaliasPorDia[ds].length > 0 && (
+                      <span
+                        title={`${anomaliasPorDia[ds].length} turno(s) fuera de rango horario`}
+                        onClick={(e) => { e.stopPropagation(); onAnomaliaClick && onAnomaliaClick(ds); }}
+                        style={{
+                          position: "absolute", top: "4px", right: "4px",
+                          background: "#E07030", color: "#fff",
+                          borderRadius: "50%", width: "16px", height: "16px",
+                          fontSize: "10px", fontWeight: 700,
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer", fontFamily: "var(--sans)",
+                          boxShadow: "0 0 0 2px rgba(224,112,48,.35)",
+                          zIndex: 5,
+                        }}
+                      >!</span>
+                    )}
                   </div>
                 );
               })}
@@ -3665,62 +3916,43 @@
                     </span>
                   </div>
                   {(dailyTotals || []).map((t, i) => {
-                    const nada = t.ef === 0 && t.or === 0;
+                    const nada = t.os === 0 && t.cobrado === 0 && t.pendiente === 0;
                     return (
                       <div
                         key={i}
                         style={{
-                          background: "#F5F0E8",
+                          background: "#EDE8DC",
                           borderTop: "2px solid rgba(200,146,42,.25)",
                           borderRight:
                             i < dailyTotals.length - 1
                               ? "1px solid #DDD5C4"
                               : "none",
-                          padding: "5px 4px",
+                          padding: "5px 6px",
                           display: "flex",
                           flexDirection: "column",
-                          alignItems: "center",
-                          gap: "1px",
+                          alignItems: "flex-start",
+                          gap: "2px",
                           minHeight: "38px",
                           justifyContent: "center",
                         }}
                       >
                         {nada ? (
-                          <span
-                            style={{
-                              fontFamily: "var(--mono)",
-                              fontSize: "9px",
-                              color: "var(--tx3)",
-                            }}
-                          >
-                            —
-                          </span>
+                          <span style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "var(--tx3)", width: "100%", textAlign: "center" }}>—</span>
                         ) : (
                           <>
-                            {t.ef > 0 && (
-                              <span
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "9px",
-                                  color: "var(--tx2)",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                <span style={{ color: "var(--tx3)" }}>Ef.</span>
-                                ${t.ef.toLocaleString("es-AR")}
+                            {t.os > 0 && (
+                              <span title="OS emitidas — sesiones con obra social" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "var(--tx2)", whiteSpace: "nowrap", cursor: "help" }}>
+                                <span style={{ color: "var(--tx3)" }}>📋 </span>${t.os.toLocaleString("es-AR")}
                               </span>
                             )}
-                            {t.or > 0 && (
-                              <span
-                                style={{
-                                  fontFamily: "var(--mono)",
-                                  fontSize: "9px",
-                                  color: "var(--tx2)",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                <span style={{ color: "var(--tx3)" }}>Or.</span>
-                                ${t.or.toLocaleString("es-AR")}
+                            {t.cobrado > 0 && (
+                              <span title="Cobrado en efectivo o transferencia" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "#2D6A3F", whiteSpace: "nowrap", cursor: "help" }}>
+                                <span style={{ color: "var(--tx3)" }}>💵 </span>${t.cobrado.toLocaleString("es-AR")}
+                              </span>
+                            )}
+                            {t.pendiente > 0 && (
+                              <span title="Pendiente de cobro (particular o coseguro sin abonar)" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "#C8922A", whiteSpace: "nowrap", cursor: "help" }}>
+                                <span style={{ color: "var(--tx3)" }}>⏳ </span>${t.pendiente.toLocaleString("es-AR")}
                               </span>
                             )}
                           </>
@@ -3957,14 +4189,20 @@
           metodoPagoOS: "efectivo",
           ordenEmitida: false,
           ordenFirmada: false,
-          /* Cobro por cancelación / reprogramación */
+          /* Cobro por cancelación / reprogramación / inasistencia — esquema nuevo */
           cobroCancel: false,
-          cancelEfectivo: false,
-          montoCancel: montoPartDefault,
-          cancelAbonado: false,
-          cancelOrden: false,
-          cancelOrdenToken: "",
-          cancelOrdenSaldada: false,
+          // Particular (sin OS)
+          cancelParticularMonto: montoPartDefault, // arranca con valor completo, editable
+          cancelParticularMetodo: "efectivo",
+          cancelParticularAbonado: false,
+          // Coseguro OS
+          cancelCoseguro: false,
+          cancelCoseguroMonto: coseguroDefault,
+          cancelCoseguroMetodo: "efectivo",
+          cancelCoseguroPagado: false,
+          // Orden OS
+          cancelOrdenOS: false,
+          cancelOrdenEmitida: false,
         };
       }
 
@@ -3992,9 +4230,24 @@
         const [notasTab, setNotasTab] = useState("clinica");
         const [confirmCancel, setConfirmCancel] = useState(false);
         const overlayMDRef = useRef(false);
+        const initialFRef = useRef(null); // snapshot del estado inicial para dirty state
+
+        function isDirty() {
+          if (!initialFRef.current) return false;
+          // Comparar excluyendo campos que se auto-llenan sin acción del usuario
+          const strip = (obj) => {
+            const { horaInicio, horaFin, ...rest } = obj;
+            return rest;
+          };
+          return JSON.stringify(strip(f)) !== initialFRef.current;
+        }
 
         function tryClose() {
-          setConfirmCancel(true);
+          if (isDirty()) {
+            setConfirmCancel(true);
+          } else {
+            onClose();
+          }
         }
         function doClose() {
           setConfirmCancel(false);
@@ -4014,27 +4267,28 @@
             ordenEmitida: sesData?.ordenEmitida ?? false,
             ordenFirmada: sesData?.ordenFirmada ?? false,
             cobroCancel: sesData?.cobroCancel ?? false,
-            /* compat. legado: cancelMetodo='efectivo_transfer' → cancelEfectivo, 'orden_os' → cancelOrden */
-            cancelEfectivo:
-              sesData?.cancelEfectivo ??
-              (sesData?.cancelMetodo === "efectivo_transfer" ? true : false),
-            montoCancel: sesData?.montoCancel ?? "",
-            cancelAbonado: sesData?.cancelAbonado ?? false,
-            cancelOrden:
-              sesData?.cancelOrden ??
-              (sesData?.cancelMetodo === "orden_os" ? true : false),
-            cancelOrdenToken: sesData?.cancelOrdenToken || "",
-            cancelOrdenSaldada: sesData?.cancelOrdenSaldada ?? false,
+            /* Esquema nuevo — con compat. legado */
+            cancelParticularMonto: sesData?.cancelParticularMonto ?? sesData?.montoCancel ?? "",
+            cancelParticularMetodo: sesData?.cancelParticularMetodo ?? sesData?.metodoCancelEfectivo ?? "efectivo",
+            cancelParticularAbonado: sesData?.cancelParticularAbonado ?? (sesData?.cancelAbonado ?? false),
+            cancelCoseguro: sesData?.cancelCoseguro ?? (sesData?.cancelEfectivo ?? false),
+            cancelCoseguroMonto: sesData?.cancelCoseguroMonto ?? sesData?.montoCancel ?? "",
+            cancelCoseguroMetodo: sesData?.cancelCoseguroMetodo ?? sesData?.metodoCancelEfectivo ?? "efectivo",
+            cancelCoseguroPagado: sesData?.cancelCoseguroPagado ?? (sesData?.cancelAbonado ?? false),
+            cancelOrdenOS: sesData?.cancelOrdenOS ?? (sesData?.cancelOrden ?? (sesData?.cancelMetodo === "orden_os" ? true : false)),
+            cancelOrdenEmitida: sesData?.cancelOrdenEmitida ?? (sesData?.cancelOrdenSaldada ?? false),
           };
         }
 
         useEffect(() => {
+          let initialState;
           if (mode === "editar" && sesion) {
             const pac = pacientes.find((p) => p.id === sesion.pacienteId);
             // Si la sesión ya tiene datos de pago nuevo, usarlos; sino derivar del paciente
             const tienePagoNuevo = sesion.modalidadPago != null;
             const datosPago = tienePagoNuevo ? pagoF(sesion) : pagoDesde(pac);
-            setF({ ...sesion, ...datosPago });
+            initialState = { ...sesion, ...datosPago };
+            setF(initialState);
             if (pac) {
               setPacSel(pac);
               setBusq(`${pac.nombre} ${pac.apellido}`);
@@ -4044,7 +4298,7 @@
             }
           } else {
             const inicio = defaultHora || "10:00";
-            setF({
+            initialState = {
               id: genId(),
               pacienteId: "",
               fecha: defaultFecha || dateStr(new Date()),
@@ -4061,10 +4315,14 @@
               notasAlertas: { clinica: false, admin: false, asistencia: false },
               colorLabel: "",
               ...pagoDesde(null),
-            });
+            };
+            setF(initialState);
             setPacSel(null);
             setBusq("");
           }
+          // Guardar snapshot sin horaInicio/horaFin (se auto-llenan, no cuentan como cambio)
+          const { horaInicio: _hi, horaFin: _hf, ...snapBase } = initialState;
+          initialFRef.current = JSON.stringify(snapBase);
           setSugs([]);
           setShowSugs(false);
           setConflictos([]);
@@ -4160,7 +4418,28 @@
             : cobradoOS
               ? Number(f.coseguroMonto) || 0
               : 0;
-          return { ...f, cobrado, montoCobrado, ...extras };
+
+          /* Normalizar campos de cancelación según tipo de paciente.
+             Evita artifacts de migración v1→v2: un paciente PARTICULAR que
+             antes tenía cancelEfectivo=true no debe quedar con cancelCoseguro=true
+             en localStorage, ya que eso genera falsos positivos en tienePendientePago. */
+          const cancelNorm = {};
+          if (f.cobroCancel) {
+            if (pacienteConOS) {
+              // Paciente con OS: limpiar campos de "particular" (no aplica)
+              cancelNorm.cancelParticularMonto = 0;
+              cancelNorm.cancelParticularAbonado = false;
+            } else {
+              // Paciente particular (sin OS): limpiar campos de OS (no aplica)
+              cancelNorm.cancelCoseguro = false;
+              cancelNorm.cancelCoseguroPagado = false;
+              cancelNorm.cancelCoseguroMonto = 0;
+              cancelNorm.cancelOrdenOS = false;
+              cancelNorm.cancelOrdenEmitida = false;
+            }
+          }
+
+          return { ...f, cobrado, montoCobrado, ...cancelNorm, ...extras };
         }
 
         function handleSave() {
@@ -4219,10 +4498,7 @@
         }
 
         function handleEstado(estado) {
-          const updf = { ...f, estado };
-          setF(updf);
-          onUpdateSesion(updf);
-          showToast(`📋 Estado: ${estado}`);
+          setF((prev) => ({ ...prev, estado }));
         }
 
         /* Auto-guarda el rating de objetivo inmediatamente (solo en editar) */
@@ -4236,11 +4512,18 @@
         }
 
         const isEditar = mode === "editar";
+        /* ── Tiene obra social activa (no particular puro) ── */
+        const pacienteConOS = !!(
+          pacSel?.obraSocial &&
+          pacSel.obraSocial !== "" &&
+          pacSel.obraSocial.toLowerCase() !== "ninguna"
+        );
         const ESTADOS = [
-          { v: "pendiente", l: "⏳ Pendiente" },
-          { v: "asistio", l: "✅ Asistió" },
-          { v: "cancelo", l: "❌ Canceló" },
-          { v: "reprogramo", l: "🔄 Reprogramó" },
+          { v: "pendiente",    l: "⏳ Pendiente" },
+          { v: "asistio",      l: "✅ Asistió" },
+          { v: "cancelo",      l: "❌ Canceló" },
+          { v: "inasistencia", l: "🚫 Inasistencia" },
+          { v: "reprogramo",   l: "🔄 Reprogramó" },
         ];
         const TIPOS = [
           { v: "individual", l: "👤 Individual" },
@@ -4255,14 +4538,31 @@
           setOpenSection((prev) => (prev === k ? null : k));
         }
 
+        /* ── Validación de rango horario ── */
+        const HORA_MIN = "07:00";
+        const HORA_MAX = "22:00";
+        const horaFueraDeRango =
+          !!(f.horaInicio && f.horaInicio < HORA_MIN) ||
+          !!(f.horaFin && f.horaFin > HORA_MAX) ||
+          !!(f.horaInicio && f.horaFin && f.horaInicio >= f.horaFin);
+
         /* ── Checklist: valores de completitud ── */
         const estadoCompleto = !!(f.estado && f.estado !== "pendiente");
 
         const cobroCmpleto = (() => {
           if (f.tipo === "AT") return true;
-          if (f.estado === "cancelo" || f.estado === "reprogramo") {
+          if (f.estado === "cancelo" || f.estado === "reprogramo" || f.estado === "inasistencia") {
             if (!f.cobroCancel) return true;
-            return !!(f.cancelAbonado || f.cancelOrdenSaldada);
+            // Nuevo esquema: verificar según tipo de paciente
+            if (pacienteConOS) {
+              const cosOk = !f.cancelCoseguro || f.cancelCoseguroPagado;
+              const osOk = !f.cancelOrdenOS || f.cancelOrdenEmitida;
+              return cosOk && osOk;
+            } else {
+              // Particular: monto 0 sin abono = ok (no se cobra); monto > 0 debe estar abonado
+              if (!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0) return true;
+              return !!f.cancelParticularAbonado;
+            }
           }
           if (f.modalidadPago === "obra_social")
             return !!(f.coseguroAbonado && f.ordenEmitida && f.ordenFirmada);
@@ -4292,11 +4592,20 @@
 
         const cobroResumen = (() => {
           if (f.tipo === "AT") return "AT — sin cobro directo";
-          if (f.estado === "cancelo" || f.estado === "reprogramo") {
-            if (!f.cobroCancel) return "Sin cobro por cancelación";
-            return f.cancelAbonado || f.cancelOrdenSaldada
-              ? "Abonado ✓"
-              : "Pendiente de cobro";
+          if (f.estado === "cancelo" || f.estado === "reprogramo" || f.estado === "inasistencia") {
+            if (!f.cobroCancel) return "Sin cobro";
+            if (pacienteConOS) {
+              const parts = [];
+              if (f.cancelCoseguro) parts.push(f.cancelCoseguroPagado ? "Coseguro ✓" : "Coseguro ⏳");
+              if (f.cancelOrdenOS) parts.push(f.cancelOrdenEmitida ? "Orden ✓" : "Orden ⏳");
+              return parts.length ? parts.join(" · ") : "Pendiente de cobro";
+            } else {
+              if (!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0)
+                return "Sin cobro ($ 0)";
+              return f.cancelParticularAbonado
+                ? `Abonado ✓ · $${Number(f.cancelParticularMonto).toLocaleString("es-AR")}`
+                : `Pendiente · $${Number(f.cancelParticularMonto).toLocaleString("es-AR")}`;
+            }
           }
           if (f.modalidadPago === "obra_social") {
             const p = [];
@@ -4503,12 +4812,17 @@
 
                 {/* ─── FECHA + HORARIO (siempre visible) ─── */}
                 <div className="mt-always-row">
-                  <div>
-                    <div className="modal-label">Fecha</div>
+                  <div style={{ minWidth: 0, textAlign: "center" }}>
+                    {/* Label = día de la semana, reactivo al cambiar la fecha */}
+                    <div className="modal-label" style={{ color: "var(--do)", textTransform: "capitalize", letterSpacing: ".03em", fontSize: "20px" }}>
+                      {f.fecha
+                        ? new Date(f.fecha + "T12:00").toLocaleDateString("es-AR", { weekday: "long" })
+                        : "Fecha"}
+                    </div>
                     <input
                       className="modal-input"
                       type="date"
-                      style={{ fontFamily: "var(--mono)" }}
+                      style={{ fontFamily: "var(--mono)", width: "100%", boxSizing: "border-box", textAlign: "center" }}
                       value={f.fecha || ""}
                       onChange={(e) => {
                         const nuevaFecha = e.target.value;
@@ -4526,12 +4840,14 @@
                       }}
                     />
                   </div>
-                  <div>
-                    <div className="modal-label">Inicio</div>
+                  <div style={{ textAlign: "center" }}>
+                    <div className="modal-label" style={{ textAlign: "center" }}>Inicio</div>
                     <input
                       className="modal-input"
                       type="time"
-                      style={{ fontFamily: "var(--mono)" }}
+                      min={HORA_MIN}
+                      max={HORA_MAX}
+                      style={{ fontFamily: "var(--mono)", textAlign: "center" }}
                       value={f.horaInicio || ""}
                       onChange={(e) => {
                         upd("horaInicio", e.target.value);
@@ -4539,17 +4855,24 @@
                       }}
                     />
                   </div>
-                  <div>
-                    <div className="modal-label">Fin</div>
+                  <div style={{ textAlign: "center" }}>
+                    <div className="modal-label" style={{ textAlign: "center" }}>Fin</div>
                     <input
                       className="modal-input"
                       type="time"
-                      style={{ fontFamily: "var(--mono)" }}
+                      min={HORA_MIN}
+                      max={HORA_MAX}
+                      style={{ fontFamily: "var(--mono)", textAlign: "center" }}
                       value={f.horaFin || ""}
                       onChange={(e) => upd("horaFin", e.target.value)}
                     />
                   </div>
                 </div>
+                {horaFueraDeRango && (
+                  <div style={{ color: "#E07050", fontFamily: "var(--sans)", fontSize: "12px", marginTop: "4px", paddingLeft: "8px" }}>
+                    ⚠️ El horario debe estar entre 07:00 y 22:00, y la hora de fin debe ser posterior al inicio.
+                  </div>
+                )}
 
                 {/* ─── 1. TIPO DE SESIÓN ─── */}
                 <div className="acc-row">
@@ -4742,7 +5065,8 @@
                       <div className="acc-body">
                         {isEditar &&
                         (f.estado === "cancelo" ||
-                          f.estado === "reprogramo") ? (
+                          f.estado === "reprogramo" ||
+                          f.estado === "inasistencia") ? (
                           <div
                             className="cobro-panel"
                             style={{
@@ -4752,235 +5076,195 @@
                             <div className="cobro-panel-title">
                               {f.estado === "cancelo"
                                 ? "❌ Cobro por cancelación"
+                                : f.estado === "inasistencia"
+                                ? "🚫 Cobro por inasistencia"
                                 : "🔄 Cobro por reprogramación"}
                             </div>
+
+                            {/* Toggle principal: ¿se cobra? */}
                             <div
                               className={`cobro-chk-row ${f.cobroCancel ? "chk-activo" : ""}`}
-                              style={{
-                                marginBottom: f.cobroCancel ? "10px" : 0,
-                              }}
+                              style={{ marginBottom: f.cobroCancel ? "12px" : 0 }}
                               onClick={() => upd("cobroCancel", !f.cobroCancel)}
                             >
-                              <div
-                                className={`cobro-chk-box ${f.cobroCancel ? "on" : ""}`}
-                              >
+                              <div className={`cobro-chk-box ${f.cobroCancel ? "on" : ""}`}>
                                 {f.cobroCancel ? "✓" : ""}
                               </div>
-                              <span
-                                className={`cobro-chk-label ${f.cobroCancel ? "on" : ""}`}
-                              >
-                                {f.cobroCancel
-                                  ? "Se cobra esta sesión"
-                                  : "Registrar cobro por esta cancelación"}
+                              <span className={`cobro-chk-label ${f.cobroCancel ? "on" : ""}`}>
+                                {f.cobroCancel ? "Se cobra esta sesión" : "Registrar cobro por esta cancelación"}
                               </span>
                             </div>
+
                             {f.cobroCancel && (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: "8px",
-                                }}
-                              >
-                                <div
-                                  style={{
+                              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+
+                                {/* ── BLOQUE A: Coseguro (solo si tiene OS) ── */}
+                                {pacienteConOS && (
+                                  <div style={{
                                     background: "rgba(255,255,255,.04)",
-                                    border: `1px solid ${f.cancelEfectivo ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
+                                    border: `1px solid ${f.cancelCoseguro ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
                                     borderRadius: "12px",
                                     padding: "10px 12px",
-                                  }}
-                                >
-                                  <div
-                                    className={`cobro-chk-row ${f.cancelEfectivo ? "chk-activo" : ""}`}
-                                    style={{
-                                      marginBottom: f.cancelEfectivo
-                                        ? "10px"
-                                        : 0,
-                                    }}
-                                    onClick={() =>
-                                      upd("cancelEfectivo", !f.cancelEfectivo)
-                                    }
-                                  >
+                                  }}>
                                     <div
-                                      className={`cobro-chk-box ${f.cancelEfectivo ? "on" : ""}`}
+                                      className={`cobro-chk-row ${f.cancelCoseguro ? "chk-activo" : ""}`}
+                                      style={{ marginBottom: f.cancelCoseguro ? "10px" : 0 }}
+                                      onClick={() => upd("cancelCoseguro", !f.cancelCoseguro)}
                                     >
-                                      {f.cancelEfectivo ? "✓" : ""}
-                                    </div>
-                                    <span
-                                      className={`cobro-chk-label ${f.cancelEfectivo ? "on" : ""}`}
-                                    >
-                                      💵 Cobro en efectivo / transferencia
-                                    </span>
-                                  </div>
-                                  {f.cancelEfectivo && (
-                                    <>
-                                      <div
-                                        style={{
-                                          display: "grid",
-                                          gridTemplateColumns: "1fr 1fr",
-                                          gap: "8px",
-                                          marginBottom: "8px",
-                                        }}
-                                      >
-                                        <div>
-                                          <div className="modal-label">
-                                            Monto $
-                                          </div>
-                                          <input
-                                            className="modal-input"
-                                            type="number"
-                                            style={{
-                                              fontFamily: "var(--mono)",
-                                              marginBottom: 0,
-                                            }}
-                                            placeholder="0"
-                                            value={f.montoCancel ?? ""}
-                                            onChange={(e) =>
-                                              upd("montoCancel", e.target.value)
-                                            }
-                                          />
-                                        </div>
-                                        <div>
-                                          <div className="modal-label">
-                                            Método
-                                          </div>
-                                          <select
-                                            className="modal-select"
-                                            style={{ marginBottom: 0 }}
-                                            value={
-                                              f.metodoCancelEfectivo ||
-                                              "efectivo"
-                                            }
-                                            onChange={(e) =>
-                                              upd(
-                                                "metodoCancelEfectivo",
-                                                e.target.value,
-                                              )
-                                            }
-                                          >
-                                            <option value="efectivo">
-                                              💵 Efectivo
-                                            </option>
-                                            <option value="transferencia">
-                                              📱 Transferencia
-                                            </option>
-                                          </select>
-                                        </div>
+                                      <div className={`cobro-chk-box ${f.cancelCoseguro ? "on" : ""}`}>
+                                        {f.cancelCoseguro ? "✓" : ""}
                                       </div>
-                                      <div
-                                        className={`cobro-chk-row ${f.cancelAbonado ? "chk-activo" : ""}`}
-                                        onClick={() =>
-                                          upd("cancelAbonado", !f.cancelAbonado)
-                                        }
-                                      >
-                                        <div
-                                          className={`cobro-chk-box ${f.cancelAbonado ? "on" : ""}`}
-                                        >
-                                          {f.cancelAbonado ? "✓" : ""}
-                                        </div>
-                                        <span
-                                          className={`cobro-chk-label ${f.cancelAbonado ? "on" : ""}`}
-                                        >
-                                          {f.cancelAbonado
-                                            ? "✅ Abonado"
-                                            : "⏳ Pendiente"}
-                                        </span>
-                                        {f.cancelAbonado &&
-                                          f.montoCancel > 0 && (
-                                            <span
-                                              style={{
-                                                marginLeft: "auto",
-                                                fontFamily: "var(--mono)",
-                                                fontSize: "12px",
-                                                color: "var(--do)",
-                                              }}
+                                      <span className={`cobro-chk-label ${f.cancelCoseguro ? "on" : ""}`}>
+                                        💵 Cobro coseguro
+                                      </span>
+                                    </div>
+                                    {f.cancelCoseguro && (
+                                      <>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+                                          <div>
+                                            <div className="modal-label">Monto $</div>
+                                            <input
+                                              className="modal-input"
+                                              type="number"
+                                              style={{ fontFamily: "var(--mono)", marginBottom: 0 }}
+                                              placeholder="0"
+                                              value={f.cancelCoseguroMonto ?? ""}
+                                              onChange={(e) => upd("cancelCoseguroMonto", e.target.value)}
+                                            />
+                                          </div>
+                                          <div>
+                                            <div className="modal-label">Método</div>
+                                            <select
+                                              className="modal-select"
+                                              style={{ marginBottom: 0 }}
+                                              value={f.cancelCoseguroMetodo || "efectivo"}
+                                              onChange={(e) => upd("cancelCoseguroMetodo", e.target.value)}
                                             >
-                                              $
-                                              {Number(
-                                                f.montoCancel,
-                                              ).toLocaleString("es-AR")}
+                                              <option value="efectivo">💵 Efectivo</option>
+                                              <option value="transferencia">📱 Transferencia</option>
+                                            </select>
+                                          </div>
+                                        </div>
+                                        <div
+                                          className={`cobro-chk-row ${f.cancelCoseguroPagado ? "chk-activo" : ""}`}
+                                          onClick={() => upd("cancelCoseguroPagado", !f.cancelCoseguroPagado)}
+                                        >
+                                          <div className={`cobro-chk-box ${f.cancelCoseguroPagado ? "on" : ""}`}>
+                                            {f.cancelCoseguroPagado ? "✓" : ""}
+                                          </div>
+                                          <span className={`cobro-chk-label ${f.cancelCoseguroPagado ? "on" : ""}`}>
+                                            {f.cancelCoseguroPagado ? "✅ Abonado" : "⏳ Pendiente"}
+                                          </span>
+                                          {f.cancelCoseguroPagado && f.cancelCoseguroMonto > 0 && (
+                                            <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: "12px", color: "var(--do)" }}>
+                                              ${Number(f.cancelCoseguroMonto).toLocaleString("es-AR")}
                                             </span>
                                           )}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                                <div
-                                  style={{
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* ── BLOQUE B: Orden OS (solo si tiene OS) ── */}
+                                {pacienteConOS && (
+                                  <div style={{
                                     background: "rgba(255,255,255,.04)",
-                                    border: `1px solid ${f.cancelOrden ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
+                                    border: `1px solid ${f.cancelOrdenOS ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
                                     borderRadius: "12px",
                                     padding: "10px 12px",
-                                  }}
-                                >
-                                  <div
-                                    className={`cobro-chk-row ${f.cancelOrden ? "chk-activo" : ""}`}
-                                    style={{
-                                      marginBottom: f.cancelOrden ? "10px" : 0,
-                                    }}
-                                    onClick={() =>
-                                      upd("cancelOrden", !f.cancelOrden)
-                                    }
-                                  >
+                                  }}>
                                     <div
-                                      className={`cobro-chk-box ${f.cancelOrden ? "on" : ""}`}
+                                      className={`cobro-chk-row ${f.cancelOrdenOS ? "chk-activo" : ""}`}
+                                      style={{ marginBottom: f.cancelOrdenOS ? "10px" : 0 }}
+                                      onClick={() => upd("cancelOrdenOS", !f.cancelOrdenOS)}
                                     >
-                                      {f.cancelOrden ? "✓" : ""}
-                                    </div>
-                                    <span
-                                      className={`cobro-chk-label ${f.cancelOrden ? "on" : ""}`}
-                                    >
-                                      🏥 Cobro con orden Obra Social
-                                    </span>
-                                  </div>
-                                  {f.cancelOrden && (
-                                    <>
-                                      <div style={{ marginBottom: "8px" }}>
-                                        <div className="modal-label">
-                                          Token de orden
-                                        </div>
-                                        <input
-                                          className="modal-input"
-                                          type="text"
-                                          style={{
-                                            fontFamily: "var(--mono)",
-                                            marginBottom: 0,
-                                          }}
-                                          placeholder="Token para marcar como saldado..."
-                                          value={f.cancelOrdenToken || ""}
-                                          onChange={(e) =>
-                                            upd(
-                                              "cancelOrdenToken",
-                                              e.target.value,
-                                            )
-                                          }
-                                        />
+                                      <div className={`cobro-chk-box ${f.cancelOrdenOS ? "on" : ""}`}>
+                                        {f.cancelOrdenOS ? "✓" : ""}
                                       </div>
+                                      <span className={`cobro-chk-label ${f.cancelOrdenOS ? "on" : ""}`}>
+                                        🏥 Orden Obra Social
+                                      </span>
+                                    </div>
+                                    {f.cancelOrdenOS && (
                                       <div
-                                        className={`cobro-chk-row ${f.cancelOrdenSaldada ? "chk-activo" : ""}`}
-                                        onClick={() =>
-                                          upd(
-                                            "cancelOrdenSaldada",
-                                            !f.cancelOrdenSaldada,
-                                          )
-                                        }
+                                        className={`cobro-chk-row ${f.cancelOrdenEmitida ? "chk-activo" : ""}`}
+                                        onClick={() => upd("cancelOrdenEmitida", !f.cancelOrdenEmitida)}
                                       >
-                                        <div
-                                          className={`cobro-chk-box ${f.cancelOrdenSaldada ? "on" : ""}`}
-                                        >
-                                          {f.cancelOrdenSaldada ? "✓" : ""}
+                                        <div className={`cobro-chk-box ${f.cancelOrdenEmitida ? "on" : ""}`}>
+                                          {f.cancelOrdenEmitida ? "✓" : ""}
                                         </div>
-                                        <span
-                                          className={`cobro-chk-label ${f.cancelOrdenSaldada ? "on" : ""}`}
-                                        >
-                                          {f.cancelOrdenSaldada
-                                            ? "✅ Token provisto — orden saldada"
-                                            : "⏳ Token pendiente"}
+                                        <span className={`cobro-chk-label ${f.cancelOrdenEmitida ? "on" : ""}`}>
+                                          {f.cancelOrdenEmitida ? "✅ Orden emitida" : "⏳ Pendiente de emitir"}
                                         </span>
                                       </div>
-                                    </>
-                                  )}
-                                </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* ── BLOQUE C: Particular (solo si NO tiene OS) ── */}
+                                {!pacienteConOS && (
+                                  <div style={{
+                                    background: "rgba(255,255,255,.04)",
+                                    border: "1px solid rgba(200,146,42,.35)",
+                                    borderRadius: "12px",
+                                    padding: "10px 12px",
+                                  }}>
+                                    <div className="modal-label" style={{ marginBottom: "6px" }}>
+                                      💵 Cobro particular
+                                    </div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+                                      <div>
+                                        <div className="modal-label">Monto $</div>
+                                        <input
+                                          className="modal-input"
+                                          type="number"
+                                          style={{ fontFamily: "var(--mono)", marginBottom: 0 }}
+                                          placeholder="0"
+                                          value={f.cancelParticularMonto ?? ""}
+                                          onChange={(e) => upd("cancelParticularMonto", e.target.value)}
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="modal-label">Método</div>
+                                        <select
+                                          className="modal-select"
+                                          style={{ marginBottom: 0 }}
+                                          value={f.cancelParticularMetodo || "efectivo"}
+                                          onChange={(e) => upd("cancelParticularMetodo", e.target.value)}
+                                        >
+                                          <option value="efectivo">💵 Efectivo</option>
+                                          <option value="transferencia">📱 Transferencia</option>
+                                        </select>
+                                      </div>
+                                    </div>
+                                    <div
+                                      className={`cobro-chk-row ${f.cancelParticularAbonado ? "chk-activo" : ""}`}
+                                      onClick={() => {
+                                        if (!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0) return;
+                                        upd("cancelParticularAbonado", !f.cancelParticularAbonado);
+                                      }}
+                                      style={{ opacity: (!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0) ? 0.4 : 1 }}
+                                    >
+                                      <div className={`cobro-chk-box ${f.cancelParticularAbonado ? "on" : ""}`}>
+                                        {f.cancelParticularAbonado ? "✓" : ""}
+                                      </div>
+                                      <span className={`cobro-chk-label ${f.cancelParticularAbonado ? "on" : ""}`}>
+                                        {(!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0)
+                                          ? "Sin cobro ($ 0)"
+                                          : f.cancelParticularAbonado
+                                          ? "✅ Abonado"
+                                          : "⏳ Pendiente"}
+                                      </span>
+                                      {f.cancelParticularAbonado && f.cancelParticularMonto > 0 && (
+                                        <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: "12px", color: "var(--do)" }}>
+                                          ${Number(f.cancelParticularMonto).toLocaleString("es-AR")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
                               </div>
                             )}
                           </div>
@@ -5698,7 +5982,12 @@
                     <button className="btn btn-sec" onClick={tryClose}>
                       Cancelar
                     </button>
-                    <button className="btn btn-g" onClick={handleSave}>
+                    <button
+                      className="btn btn-g"
+                      onClick={handleSave}
+                      disabled={horaFueraDeRango}
+                      style={horaFueraDeRango ? { opacity: 0.45, cursor: "not-allowed" } : {}}
+                    >
                       {isEditar ? "Actualizar" : "Crear turno"}
                     </button>
                   </div>
@@ -6187,12 +6476,6 @@
         const [modalEliminar, setModalEliminar] = useState(null);
         const [modalConfirmActivar, setModalConfirmActivar] = useState(false);
         const [extraFeriados, setExtraFeriados] = useState([]);
-        const [showFeriadoPanel, setShowFeriadoPanel] = useState(false);
-        const [newFeriado, setNewFeriado] = useState({
-          fecha: "",
-          nombre: "",
-          trabaja: false,
-        });
         const [showOrdenes, setShowOrdenes] = useState(false);
         const [showNovedades, setShowNovedades] = useState(false);
         const [showStats, setShowStats] = useState(false);
@@ -6216,6 +6499,8 @@
         const [config, setConfig] = useState(
           () => getData("hgsp_config") || {},
         );
+        const [diaPanel, setDiaPanel] = useState(null);       // fecha "YYYY-MM-DD" del PanelDia abierto
+        const [anomaliaPanel, setAnomaliaPanel] = useState(null); // fecha "YYYY-MM-DD" del PanelAnomalias
 
         function loadData() {
           setSesiones(getData("hgsp_sesiones"));
@@ -6232,32 +6517,6 @@
 
         /* ── feriados ── */
         const feriadoMap = getFeriadoSet(extraFeriados);
-
-        function addFeriado() {
-          if (!newFeriado.fecha || !newFeriado.nombre.trim()) {
-            showToast("⚠️ Ingresá fecha y nombre");
-            return;
-          }
-          const all = getData("hgsp_feriados_extra");
-          all.push({
-            id: genId(),
-            fecha: newFeriado.fecha,
-            nombre: newFeriado.nombre.trim(),
-            trabaja: newFeriado.trabaja,
-            tipo: "local",
-          });
-          setData("hgsp_feriados_extra", all);
-          setNewFeriado({ fecha: "", nombre: "", trabaja: false });
-          loadData();
-          showToast("📌 Feriado local agregado");
-        }
-        function delFeriado(id) {
-          setData(
-            "hgsp_feriados_extra",
-            getData("hgsp_feriados_extra").filter((f) => f.id !== id),
-          );
-          loadData();
-        }
 
         /* ── navegación semanal ── */
         const weekDates = getWeekDates(baseDate);
@@ -6276,18 +6535,16 @@
               t += Number(s.montoParticular) || 0;
             if (s.modalidadPago === "obra_social" && s.coseguroAbonado)
               t += Number(s.coseguroMonto) || 0;
-            // Cobro cancelación — esquema nuevo
-            if (s.cobroCancel && s.cancelEfectivo && s.cancelAbonado)
-              t += Number(s.montoCancel) || 0;
-            // Cobro cancelación — compat legado
-            if (
-              s.cobroCancel &&
-              !s.cancelEfectivo &&
-              !s.cancelOrden &&
-              s.cancelAbonado &&
-              s.cancelMetodo !== "orden_os"
-            )
-              t += Number(s.montoCancel) || 0;
+            // Cobro cancelación — esquema v2
+            if (s.cobroCancel && (s.cancelCoseguro !== undefined || s.cancelParticularMonto !== undefined)) {
+              if (s.cancelCoseguro && s.cancelCoseguroPagado) t += Number(s.cancelCoseguroMonto) || 0;
+              if (s.cancelParticularAbonado) t += Number(s.cancelParticularMonto) || 0;
+            } else if (s.cobroCancel) {
+              // Cobro cancelación — esquema legado v1
+              if (s.cancelEfectivo && s.cancelAbonado) t += Number(s.montoCancel) || 0;
+              if (!s.cancelEfectivo && !s.cancelOrden && s.cancelAbonado && s.cancelMetodo !== "orden_os")
+                t += Number(s.montoCancel) || 0;
+            }
             return sum + t;
           }, 0);
 
@@ -6302,18 +6559,17 @@
               if (s.modalidadPago === "obra_social" && !s.coseguroAbonado)
                 t += Number(s.coseguroMonto) || 0;
             }
-            // Cobro cancelación — esquema nuevo
-            if (s.cobroCancel && s.cancelEfectivo && !s.cancelAbonado)
-              t += Number(s.montoCancel) || 0;
-            // Cobro cancelación — compat legado
-            if (
-              s.cobroCancel &&
-              !s.cancelEfectivo &&
-              !s.cancelOrden &&
-              !s.cancelAbonado &&
-              s.cancelMetodo !== "orden_os"
-            )
-              t += Number(s.montoCancel) || 0;
+            // Cobro cancelación — esquema v2
+            if (s.cobroCancel && (s.cancelCoseguro !== undefined || s.cancelParticularMonto !== undefined)) {
+              if (s.cancelCoseguro && !s.cancelCoseguroPagado) t += Number(s.cancelCoseguroMonto) || 0;
+              const mPart = Number(s.cancelParticularMonto) || 0;
+              if (mPart > 0 && !s.cancelParticularAbonado) t += mPart;
+            } else if (s.cobroCancel) {
+              // Esquema legado v1
+              if (s.cancelEfectivo && !s.cancelAbonado) t += Number(s.montoCancel) || 0;
+              if (!s.cancelEfectivo && !s.cancelOrden && !s.cancelAbonado && s.cancelMetodo !== "orden_os")
+                t += Number(s.montoCancel) || 0;
+            }
             return sum + t;
           }, 0);
 
@@ -6352,31 +6608,47 @@
 
         /* Totales diarios por columna de agenda */
         const visibleDatesForGrid = weekDates.slice(0, showWeekend ? 7 : 5);
+
+        /* Anomalías: turnos fuera del rango 07:00-22:00, por fecha */
+        const anomaliasPorDia = visibleDatesForGrid.reduce((acc, d) => {
+          const ds = dateStr(d);
+          acc[ds] = sesiones.filter(
+            (s) => s.fecha === ds &&
+              ((s.horaInicio && s.horaInicio < "07:00") || (s.horaFin && s.horaFin > "22:00"))
+          );
+          return acc;
+        }, {});
+
         const dailyTotals = visibleDatesForGrid.map((d) => {
           const ds = dateStr(d);
           const daySes = sesiones.filter(
             (s) =>
               s.fecha === ds &&
               s.tipo !== "reserva_personal" &&
-              s.tipo !== "AT",
+              s.tipo !== "AT" &&
+              s.estado === "asistio",
           );
-          let ef = 0,
-            or = 0;
+          let os = 0, cobrado = 0, pendiente = 0;
           daySes.forEach((s) => {
-            if (s.modalidadPago === "obra_social") {
-              or += valorOrdenDe(s);
+            const pac = pacientes.find((p) => p.id === s.pacienteId);
+            const tieneOS = pac?.obraSocial && pac.obraSocial !== "" && pac.obraSocial.toLowerCase() !== "ninguna";
+            if (tieneOS) {
+              os += valorOrdenDe(s);
+            } else if (s.cobrado) {
+              cobrado += valorParticularDe(s);
+              // TODO: discriminar efectivo/transferencia cuando exista s.metodoPago
             } else {
-              ef += valorParticularDe(s);
+              pendiente += valorParticularDe(s);
             }
           });
-          return { ef, or };
+          return { os, cobrado, pendiente };
         });
 
         const pendSem = weekSes.filter(
           (s) => s.estado === "pendiente" && s.tipo !== "reserva_personal",
         ).length;
         const cancelSem = weekSes.filter(
-          (s) => s.estado === "cancelo" && s.tipo !== "reserva_personal",
+          (s) => (s.estado === "cancelo" || s.estado === "inasistencia") && s.tipo !== "reserva_personal",
         ).length;
 
         /* Novedades: sesiones con pendientes de cobro/orden/notas esta semana */
@@ -6414,6 +6686,25 @@
               });
             return base;
           });
+
+        /* Órdenes OS pendientes de emitir — históricas (all-time) */
+        const ordenesHistPendientes = sesiones.filter(
+          (s) =>
+            s.cobroCancel &&
+            s.cancelOrdenOS &&
+            !s.cancelOrdenEmitida &&
+            (s.estado === "cancelo" || s.estado === "reprogramo" || s.estado === "inasistencia"),
+        ).map((s) => {
+          const pac = pacientes.find((p) => p.id === s.pacienteId);
+          return {
+            sesionId: s.id,
+            pacNombre: pac ? `${pac.nombre} ${pac.apellido}` : "Paciente",
+            obraSocial: pac?.obraSocial || "",
+            fecha: s.fecha,
+            hora: s.horaInicio,
+            estado: s.estado,
+          };
+        });
 
         /* ── label semana ── */
         const weekLabel = (() => {
@@ -7592,7 +7883,7 @@
                   gap: "8px",
                   padding: "9px 20px",
                   borderRadius: "50px",
-                  border: `2px solid ${novedadesItems.length + recordatoriosActivos.length > 0 ? "var(--do)" : "rgba(200,146,42,.45)"}`,
+                  border: `2px solid ${novedadesItems.length + recordatoriosActivos.length + ordenesHistPendientes.length > 0 ? "var(--do)" : "rgba(200,146,42,.45)"}`,
                   background: showNovedades ? "var(--do)" : "var(--vd)",
                   color: showNovedades ? "var(--vd)" : "var(--do)",
                   fontFamily: "var(--sans)",
@@ -7602,14 +7893,14 @@
                   transition: "all .2s",
                   whiteSpace: "nowrap",
                   boxShadow:
-                    novedadesItems.length + recordatoriosActivos.length > 0
+                    novedadesItems.length + recordatoriosActivos.length + ordenesHistPendientes.length > 0
                       ? "0 0 0 3px rgba(200,146,42,.18)"
                       : "none",
                 }}
               >
                 Novedades de la semana
                 <span style={{ fontSize: "16px", lineHeight: 1 }}>
-                  {novedadesItems.length + recordatoriosActivos.length > 0
+                  {novedadesItems.length + recordatoriosActivos.length + ordenesHistPendientes.length > 0
                     ? "❗"
                     : "✓"}
                 </span>
@@ -7643,7 +7934,7 @@
               <div className="novedades-panel" style={{ marginTop: "10px" }}>
                 <div className="novedades-title">
                   ⚠️ Novedades de la semana
-                  {novedadesItems.length + recordatoriosActivos.length === 0 ? (
+                  {novedadesItems.length + recordatoriosActivos.length + ordenesHistPendientes.length === 0 ? (
                     <span
                       style={{
                         fontFamily: "var(--mono)",
@@ -7665,9 +7956,9 @@
                         fontWeight: 400,
                       }}
                     >
-                      · {novedadesItems.length + recordatoriosActivos.length}{" "}
+                      · {novedadesItems.length + recordatoriosActivos.length + ordenesHistPendientes.length}{" "}
                       pendiente
-                      {novedadesItems.length + recordatoriosActivos.length > 1
+                      {novedadesItems.length + recordatoriosActivos.length + ordenesHistPendientes.length > 1
                         ? "s"
                         : ""}{" "}
                       a resolver
@@ -7675,7 +7966,8 @@
                   )}
                 </div>
                 {novedadesItems.length === 0 &&
-                recordatoriosActivos.length === 0 ? (
+                recordatoriosActivos.length === 0 &&
+                ordenesHistPendientes.length === 0 ? (
                   <div
                     style={{
                       fontFamily: "var(--mono)",
@@ -7692,17 +7984,21 @@
                     const estadoIcon =
                       n.estado === "cancelo"
                         ? "❌"
-                        : n.estado === "reprogramo"
-                          ? "🔄"
-                          : n.estado === "pendiente"
-                            ? "⏳"
-                            : "✅";
+                        : n.estado === "inasistencia"
+                          ? "🚫"
+                          : n.estado === "reprogramo"
+                            ? "🔄"
+                            : n.estado === "pendiente"
+                              ? "⏳"
+                              : "✅";
                     const estadoLabel =
                       n.estado === "cancelo"
                         ? "Canceló"
-                        : n.estado === "reprogramo"
-                          ? "Reprogramó"
-                          : n.estado === "pendiente"
+                        : n.estado === "inasistencia"
+                          ? "Inasistencia"
+                          : n.estado === "reprogramo"
+                            ? "Reprogramó"
+                            : n.estado === "pendiente"
                             ? "Sin confirmar"
                             : "Asistió";
                     return (
@@ -7950,6 +8246,130 @@
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* SECCIÓN ÓRDENES OS PENDIENTES DE EMITIR (históricas) */}
+                {ordenesHistPendientes.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: novedadesItems.length > 0 || recordatoriosActivos.length > 0 ? "14px" : "0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--mono)",
+                        fontSize: "10px",
+                        color: "rgba(200,146,42,.65)",
+                        textTransform: "uppercase",
+                        letterSpacing: ".07em",
+                        marginBottom: "8px",
+                        paddingLeft: "2px",
+                      }}
+                    >
+                      🏥 Órdenes OS pendientes de emitir
+                    </div>
+                    {ordenesHistPendientes.map((o, i) => {
+                      const sesObj = sesiones.find((s) => s.id === o.sesionId);
+                      const estadoIcon =
+                        o.estado === "cancelo" ? "❌"
+                        : o.estado === "inasistencia" ? "🚫"
+                        : "🔄";
+                      return (
+                        <div
+                          key={o.sesionId}
+                          style={{
+                            background: "rgba(255,255,255,.04)",
+                            border: "1px solid rgba(200,146,42,.2)",
+                            borderLeft: "3px solid #7AB8E0",
+                            borderRadius: "12px",
+                            padding: "10px 14px",
+                            marginBottom: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "50%",
+                              background: "rgba(122,184,224,.15)",
+                              border: "1.5px solid rgba(122,184,224,.4)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontFamily: "var(--mono)",
+                              fontSize: "9px",
+                              color: "#7AB8E0",
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {i + 1}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <span
+                              style={{
+                                fontFamily: "var(--sans)",
+                                fontSize: "13px",
+                                fontWeight: 700,
+                                color: "rgba(255,255,255,.9)",
+                              }}
+                            >
+                              {o.pacNombre}
+                            </span>
+                            {o.obraSocial && (
+                              <span
+                                style={{
+                                  fontFamily: "var(--mono)",
+                                  fontSize: "10px",
+                                  color: "rgba(255,255,255,.35)",
+                                  marginLeft: "8px",
+                                }}
+                              >
+                                · {o.obraSocial}
+                              </span>
+                            )}
+                            <span
+                              style={{
+                                fontFamily: "var(--mono)",
+                                fontSize: "10px",
+                                color: "rgba(255,255,255,.25)",
+                                marginLeft: "8px",
+                              }}
+                            >
+                              {estadoIcon} {o.fecha} {o.hora}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() =>
+                              sesObj &&
+                              setModalTurno({
+                                mode: "editar",
+                                sesion: sesObj,
+                                fecha: sesObj.fecha,
+                                hora: sesObj.horaInicio,
+                              })
+                            }
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              fontFamily: "var(--mono)",
+                              fontSize: "10px",
+                              color: "rgba(255,255,255,.3)",
+                              padding: "2px 6px",
+                              borderRadius: "6px",
+                            }}
+                            title="Abrir turno para emitir orden"
+                          >
+                            Abrir →
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -8458,6 +8878,9 @@
                       hora: s.horaInicio,
                     });
                 }}
+                onDayClick={(ds) => setDiaPanel(ds)}
+                onAnomaliaClick={(ds) => setAnomaliaPanel(ds)}
+                anomaliasPorDia={anomaliasPorDia}
               />
             )}
 
@@ -8475,159 +8898,37 @@
               />
             )}
 
-            {/* PANEL FERIADOS EXTRA */}
-            <div style={{ marginTop: "20px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: showFeriadoPanel ? "12px" : 0,
+            {/* PANEL DÍA */}
+            {diaPanel && (
+              <PanelDia
+                fecha={diaPanel}
+                sesiones={sesiones}
+                pacientes={pacientes}
+                onClose={() => setDiaPanel(null)}
+                onEditar={(s) => {
+                  setModalTurno({ mode: "editar", sesion: s, fecha: s.fecha, hora: s.horaInicio });
                 }}
-              >
-                <button
-                  className="btn btn-sec"
-                  style={{ fontSize: "12px", padding: "6px 14px" }}
-                  onClick={() => setShowFeriadoPanel(!showFeriadoPanel)}
-                >
-                  {showFeriadoPanel ? "▲" : "▼"} Feriados locales / extra
-                </button>
-                <span
-                  style={{
-                    fontFamily: "var(--mono)",
-                    fontSize: "11px",
-                    color: "var(--tx3)",
-                  }}
-                >
-                  ⭐ = feriado nacional · ⭐ = feriado local (11 nov: Día de Río
-                  Cuarto incluido)
-                </span>
-              </div>
-              {showFeriadoPanel && (
-                <div className="card" style={{ marginBottom: 0 }}>
-                  <div className="card-header">
-                    <div className="card-header-icon">📅</div>
-                    <div className="card-header-title">
-                      Feriados locales adicionales
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 2fr auto auto",
-                      gap: "8px",
-                      alignItems: "center",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    <input
-                      className="input-base"
-                      type="date"
-                      style={{ fontFamily: "var(--mono)" }}
-                      value={newFeriado.fecha}
-                      onChange={(e) =>
-                        setNewFeriado((p) => ({ ...p, fecha: e.target.value }))
-                      }
-                    />
-                    <input
-                      className="input-base"
-                      placeholder="Nombre del feriado..."
-                      value={newFeriado.nombre}
-                      onChange={(e) =>
-                        setNewFeriado((p) => ({ ...p, nombre: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && addFeriado()}
-                    />
-                    <div
-                      className="chk-wrap"
-                      title="¿Se trabaja igual?"
-                      onClick={() =>
-                        setNewFeriado((p) => ({ ...p, trabaja: !p.trabaja }))
-                      }
-                    >
-                      <div
-                        className={`chk-box ${newFeriado.trabaja ? "chk-on" : ""}`}
-                      >
-                        {newFeriado.trabaja ? "✓" : ""}
-                      </div>
-                      <span
-                        style={{
-                          marginLeft: "6px",
-                          fontSize: "12px",
-                          color: "var(--tx2)",
-                        }}
-                      >
-                        Trabajo igual
-                      </span>
-                    </div>
-                    <button
-                      className="btn btn-g"
-                      style={{ fontSize: "12px", padding: "6px 14px" }}
-                      onClick={addFeriado}
-                    >
-                      Agregar
-                    </button>
-                  </div>
-                  {extraFeriados.length > 0 ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                      }}
-                    >
-                      {extraFeriados.map((f) => (
-                        <div
-                          key={f.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            padding: "6px 10px",
-                            background: "#F0EBE0",
-                            borderRadius: "50px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontFamily: "var(--mono)",
-                              fontSize: "12px",
-                              color: "var(--tx2)",
-                            }}
-                          >
-                            {f.fecha}
-                          </span>
-                          <span style={{ flex: 1, fontSize: "13px" }}>
-                            {f.nombre}
-                          </span>
-                          {f.trabaja && (
-                            <Badge type="warn">Trabajo igual</Badge>
-                          )}
-                          <span
-                            className="act-link"
-                            style={{ color: "#C0392B" }}
-                            onClick={() => delFeriado(f.id)}
-                          >
-                            ✕
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        color: "var(--tx3)",
-                        fontSize: "13px",
-                        textAlign: "center",
-                        padding: "12px",
-                      }}
-                    >
-                      Sin feriados locales extra agregados
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+              />
+            )}
+
+            {/* PANEL ANOMALÍAS */}
+            {anomaliaPanel && (
+              <PanelAnomalias
+                fecha={anomaliaPanel}
+                sesiones={sesiones}
+                pacientes={pacientes}
+                onClose={() => setAnomaliaPanel(null)}
+                onEditar={(s) => {
+                  setModalTurno({ mode: "editar", sesion: s, fecha: s.fecha, hora: s.horaInicio });
+                }}
+                onEliminar={(s) => {
+                  const all = getData("hgsp_sesiones").filter((x) => x.id !== s.id);
+                  setData("hgsp_sesiones", all);
+                  loadData();
+                  showToast("🗑 Turno eliminado");
+                }}
+              />
+            )}
 
             {/* MODAL TURNO */}
             {modalTurno && (
@@ -10259,7 +10560,7 @@
         const totalSesiones = sesiones.length;
         const asistidas = sesiones.filter((s) => s.estado === "asistio").length;
         const canceladas = sesiones.filter(
-          (s) => s.estado === "cancelo",
+          (s) => s.estado === "cancelo" || s.estado === "inasistencia",
         ).length;
         const pendientes = sesiones.filter(
           (s) => s.estado === "pendiente",
@@ -10727,12 +11028,12 @@
                                 type={
                                   s.estado === "asistio"
                                     ? "ok"
-                                    : s.estado === "cancelo"
+                                    : s.estado === "cancelo" || s.estado === "inasistencia"
                                       ? "error"
                                       : "warn"
                                 }
                               >
-                                {s.estado}
+                                {ESTADO_ICONS[s.estado] || "⏳"} {s.estado}
                               </Badge>
                             </td>
                             <td>
@@ -11460,10 +11761,10 @@
         const sesiones = getData("hgsp_sesiones");
         const pacientes = getData("hgsp_pacientes");
 
-        /* sesiones del mes, sin canceladas, con OS */
+        /* sesiones del mes, sin canceladas/inasistencias, con OS */
         const sesMes = sesiones.filter((s) => {
           const [y, m] = s.fecha.split("-").map(Number);
-          return y === anio && m === mes && s.estado !== "cancelo";
+          return y === anio && m === mes && s.estado !== "cancelo" && s.estado !== "inasistencia";
         });
 
         /* agrupar por OS */
@@ -12666,6 +12967,7 @@
               s.pacienteId === pacId &&
               s.tipo === "AT" &&
               s.estado !== "cancelo" &&
+              s.estado !== "inasistencia" &&
               new Date(s.fecha + "T12:00").getMonth() + 1 === mes &&
               new Date(s.fecha + "T12:00").getFullYear() === anio,
           )
@@ -14216,8 +14518,30 @@
           prestador: false,
           economicos: false,
           os: false,
+          feriados: false,
           backup: false,
         });
+
+        /* ── Feriados locales ── */
+        const [extraFeriados, setExtraFeriados] = useState(() => getData("hgsp_feriados_extra"));
+        const [newFeriado, setNewFeriado] = useState({ fecha: "", nombre: "", trabaja: false });
+        function addFeriadoCfg() {
+          if (!newFeriado.fecha || !newFeriado.nombre.trim()) {
+            showToast("⚠️ Ingresá fecha y nombre");
+            return;
+          }
+          const all = getData("hgsp_feriados_extra");
+          all.push({ id: genId(), fecha: newFeriado.fecha, nombre: newFeriado.nombre.trim(), trabaja: newFeriado.trabaja, tipo: "local" });
+          setData("hgsp_feriados_extra", all);
+          setExtraFeriados(all);
+          setNewFeriado({ fecha: "", nombre: "", trabaja: false });
+          showToast("📌 Feriado local agregado");
+        }
+        function delFeriadoCfg(id) {
+          const all = getData("hgsp_feriados_extra").filter((f) => f.id !== id);
+          setData("hgsp_feriados_extra", all);
+          setExtraFeriados(all);
+        }
         function toggle(sec) {
           setOpen((o) => ({ ...o, [sec]: !o[sec] }));
         }
@@ -14377,6 +14701,13 @@
             cBd: "#4F9278",
             oBg: "#3D6B55",
             oBd: "rgba(79,146,120,.4)",
+          },
+          feriados: {
+            cBg: "#6B8EAE",
+            cTx: "#0F1E2E",
+            cBd: "#4A6E8E",
+            oBg: "#2D4E6A",
+            oBd: "rgba(74,110,142,.4)",
           },
           backup: {
             cBg: "#A09080",
@@ -15008,6 +15339,84 @@
                         <button className="btn btn-sec" onClick={cancelEdit}>
                           Cancelar
                         </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ── FERIADOS LOCALES ── */}
+              <div style={cfgWrap}>
+                <div
+                  style={cfgBarStyle("feriados")}
+                  onClick={() => toggle("feriados")}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "18px" }}>📅</span>
+                    <div>
+                      <div style={{ fontFamily: "var(--serif2)", fontWeight: 700, fontSize: "15px", color: cfgTitleColor("feriados") }}>
+                        Feriados locales / extra
+                      </div>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: "10px", marginTop: "1px", color: cfgSubColor("feriados") }}>
+                        {open.feriados
+                          ? "Editá feriados locales"
+                          : `${extraFeriados.length} feriado${extraFeriados.length !== 1 ? "s" : ""} cargado${extraFeriados.length !== 1 ? "s" : ""}`}
+                      </div>
+                    </div>
+                  </div>
+                  {cfgChevron("feriados")}
+                </div>
+                {open.feriados && (
+                  <div style={cfgBody("feriados")}>
+                    <div style={{ marginBottom: "12px", fontSize: "13px", color: "var(--tx2)", lineHeight: 1.5 }}>
+                      Agregá feriados locales (provinciales, municipales, personales) que no están en el calendario nacional.
+                      Se usan para resaltar días en la agenda.
+                    </div>
+                    {/* Formulario agregar */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto auto", gap: "8px", alignItems: "center", marginBottom: "14px" }}>
+                      <input
+                        className="input-base"
+                        type="date"
+                        style={{ fontFamily: "var(--mono)" }}
+                        value={newFeriado.fecha}
+                        onChange={(e) => setNewFeriado((p) => ({ ...p, fecha: e.target.value }))}
+                      />
+                      <input
+                        className="input-base"
+                        placeholder="Nombre del feriado..."
+                        value={newFeriado.nombre}
+                        onChange={(e) => setNewFeriado((p) => ({ ...p, nombre: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && addFeriadoCfg()}
+                      />
+                      <div
+                        className="chk-wrap"
+                        title="¿Se trabaja igual?"
+                        onClick={() => setNewFeriado((p) => ({ ...p, trabaja: !p.trabaja }))}
+                      >
+                        <div className={`chk-box ${newFeriado.trabaja ? "chk-on" : ""}`}>
+                          {newFeriado.trabaja ? "✓" : ""}
+                        </div>
+                        <span style={{ marginLeft: "6px", fontSize: "12px", color: "var(--tx2)" }}>Trabajo igual</span>
+                      </div>
+                      <button className="btn btn-g" style={{ fontSize: "12px", padding: "6px 14px" }} onClick={addFeriadoCfg}>
+                        Agregar
+                      </button>
+                    </div>
+                    {/* Lista */}
+                    {extraFeriados.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {extraFeriados.map((f) => (
+                          <div key={f.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "6px 10px", background: "#F0EBE0", borderRadius: "50px" }}>
+                            <span style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--tx2)" }}>{f.fecha}</span>
+                            <span style={{ flex: 1, fontSize: "13px" }}>{f.nombre}</span>
+                            {f.trabaja && <Badge type="warn">Trabajo igual</Badge>}
+                            <span className="act-link" style={{ color: "#C0392B" }} onClick={() => delFeriadoCfg(f.id)}>✕</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: "var(--tx3)", fontSize: "13px", textAlign: "center", padding: "12px" }}>
+                        Sin feriados locales extra agregados
                       </div>
                     )}
                   </div>
