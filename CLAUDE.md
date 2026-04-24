@@ -17,6 +17,13 @@ Se abre directamente en Chrome/Edge en Windows, sin servidor.
 - Persistencia: localStorage (prefijo `hgsp_` en todas las claves)
 - Sin backend, sin login, sin APIs externas
 
+## Git — Reglas de trabajo con ramas
+
+- Siempre trabajar y commitear en la rama `master` del repositorio principal.
+- Al pedir confirmación para pushear, el push va directo a `master` → Netlify redesplega automáticamente.
+- NO usar ramas auxiliares ni worktrees. Sin merges intermedios.
+- Si el usuario dice "no pushees", simplemente no se hace el push.
+
 ## Reglas de trabajo
 
 - Todo en UN SOLO ARCHIVO .html. No separar CSS ni JS.
