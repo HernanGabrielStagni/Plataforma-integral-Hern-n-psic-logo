@@ -1,0 +1,11 @@
+# Claude Code - worktrees temporales (NO subir al repo)
+.claude/worktrees/
+
+# Archivos temporales de Office/Windows
+~$*
+*.tmp
+Thumbs.db
+.DS_Store
+
+# Node (por si lo usás en el futuro)
+node_modules/
