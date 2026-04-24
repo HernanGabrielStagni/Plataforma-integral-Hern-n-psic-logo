@@ -3904,7 +3904,7 @@
                     <span
                       style={{
                         fontFamily: "var(--mono)",
-                        fontSize: "7px",
+                        fontSize: "10px",
                         color: "rgba(255,255,255,.3)",
                         textTransform: "uppercase",
                         letterSpacing: ".05em",
@@ -3916,7 +3916,7 @@
                     </span>
                   </div>
                   {(dailyTotals || []).map((t, i) => {
-                    const nada = t.os === 0 && t.cobrado === 0 && t.pendiente === 0;
+                    const nada = t.ordenes === 0 && t.efectivo === 0 && t.transferencia === 0 && t.pendiente === 0;
                     return (
                       <div
                         key={i}
@@ -3932,27 +3932,32 @@
                           flexDirection: "column",
                           alignItems: "flex-start",
                           gap: "2px",
-                          minHeight: "38px",
+                          minHeight: "44px",
                           justifyContent: "center",
                         }}
                       >
                         {nada ? (
-                          <span style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "var(--tx3)", width: "100%", textAlign: "center" }}>—</span>
+                          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--tx3)", width: "100%", textAlign: "center" }}>—</span>
                         ) : (
                           <>
-                            {t.os > 0 && (
-                              <span title="OS emitidas — sesiones con obra social" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "var(--tx2)", whiteSpace: "nowrap", cursor: "help" }}>
-                                <span style={{ color: "var(--tx3)" }}>📋 </span>${t.os.toLocaleString("es-AR")}
+                            {t.ordenes > 0 && (
+                              <span title="Órdenes OS emitidas" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--tx2)", whiteSpace: "nowrap", cursor: "help" }}>
+                                📋 ${t.ordenes.toLocaleString("es-AR")}
                               </span>
                             )}
-                            {t.cobrado > 0 && (
-                              <span title="Cobrado en efectivo o transferencia" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "#2D6A3F", whiteSpace: "nowrap", cursor: "help" }}>
-                                <span style={{ color: "var(--tx3)" }}>💵 </span>${t.cobrado.toLocaleString("es-AR")}
+                            {t.efectivo > 0 && (
+                              <span title="Cobrado en efectivo" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#2D6A3F", whiteSpace: "nowrap", cursor: "help" }}>
+                                💵 ${t.efectivo.toLocaleString("es-AR")}
+                              </span>
+                            )}
+                            {t.transferencia > 0 && (
+                              <span title="Cobrado por transferencia" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#1A5276", whiteSpace: "nowrap", cursor: "help" }}>
+                                📱 ${t.transferencia.toLocaleString("es-AR")}
                               </span>
                             )}
                             {t.pendiente > 0 && (
-                              <span title="Pendiente de cobro (particular o coseguro sin abonar)" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "#C8922A", whiteSpace: "nowrap", cursor: "help" }}>
-                                <span style={{ color: "var(--tx3)" }}>⏳ </span>${t.pendiente.toLocaleString("es-AR")}
+                              <span title="Pendiente de cobro" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#C8922A", whiteSpace: "nowrap", cursor: "help" }}>
+                                ⏳ ${t.pendiente.toLocaleString("es-AR")}
                               </span>
                             )}
                           </>
@@ -6606,26 +6611,52 @@
         const dailyTotals = visibleDatesForGrid.map((d) => {
           const ds = dateStr(d);
           const daySes = sesiones.filter(
-            (s) =>
-              s.fecha === ds &&
-              s.tipo !== "reserva_personal" &&
-              s.tipo !== "AT" &&
-              s.estado === "asistio",
+            (s) => s.fecha === ds && s.tipo !== "reserva_personal" && s.tipo !== "AT",
           );
-          let os = 0, cobrado = 0, pendiente = 0;
+          let efectivo = 0, transferencia = 0, ordenes = 0, pendiente = 0;
+          const addCobro = (monto, metodo, pagado) => {
+            if (!monto || monto <= 0) return;
+            if (!pagado) { pendiente += monto; return; }
+            if (metodo === "transferencia") transferencia += monto;
+            else efectivo += monto;
+          };
           daySes.forEach((s) => {
             const pac = pacientes.find((p) => p.id === s.pacienteId);
-            const tieneOS = pac?.obraSocial && pac.obraSocial !== "" && pac.obraSocial.toLowerCase() !== "ninguna";
-            if (tieneOS) {
-              os += valorOrdenDe(s);
-            } else if (s.cobrado) {
-              cobrado += valorParticularDe(s);
-              // TODO: discriminar efectivo/transferencia cuando exista s.metodoPago
-            } else {
-              pendiente += valorParticularDe(s);
+            const tieneOS = !!(pac?.obraSocial && pac.obraSocial !== "" && pac.obraSocial.toLowerCase() !== "ninguna");
+            const coseguroMonto = tieneOS ? (pac?.coseguro || 0) : 0;
+
+            if (s.estado === "asistio") {
+              if (tieneOS) {
+                const ord = valorOrdenDe(s);
+                if (ord > 0) ordenes += ord;
+                if (coseguroMonto > 0) addCobro(coseguroMonto, s.metodoPago, s.cobrado);
+              } else {
+                const monto = valorParticularDe(s);
+                addCobro(monto, s.metodoPago, s.cobrado);
+              }
+            } else if (s.cobroCancel) {
+              if (tieneOS) {
+                // V2: coseguro de cancelación
+                if (s.cancelCoseguro && (s.cancelCoseguroMonto || 0) > 0) {
+                  addCobro(s.cancelCoseguroMonto, s.cancelCoseguroMetodo, s.cancelCoseguroPagado);
+                }
+                // V2: orden OS en cancelación
+                if (s.cancelOrdenOS && s.cancelOrdenEmitida) {
+                  const ord = valorOrdenDe(s);
+                  if (ord > 0) ordenes += ord;
+                }
+              } else {
+                // V2: particular cancelación
+                if ((s.cancelParticularMonto || 0) > 0) {
+                  addCobro(s.cancelParticularMonto, s.cancelParticularMetodo, s.cancelParticularAbonado);
+                } else if ((s.montoCancel || 0) > 0) {
+                  // V1 legado
+                  addCobro(s.montoCancel, "efectivo", s.cancelAbonado);
+                }
+              }
             }
           });
-          return { os, cobrado, pendiente };
+          return { efectivo, transferencia, ordenes, pendiente };
         });
 
         const pendSem = weekSes.filter(
