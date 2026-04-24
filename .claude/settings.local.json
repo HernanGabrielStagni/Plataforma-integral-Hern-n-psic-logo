@@ -27,7 +27,8 @@
       "mcp__Claude_in_Chrome__resize_window",
       "Bash(awk -F: 'NR>=200 && NR<=270')",
       "Bash(awk -F: '$1>4389 && $1<5500')",
-      "Bash(awk 'NR>=4900 && NR<=4960' \"D:\\\\01_HERNAN SynC_24\\\\5_VARIOS HERNAN\\\\AI\\\\Proyectos personales\\\\App Plataforma integral psicólogo\\\\App Anti Gravity plataforma integral\\\\index.html\")"
+      "Bash(awk 'NR>=4900 && NR<=4960' \"D:\\\\01_HERNAN SynC_24\\\\5_VARIOS HERNAN\\\\AI\\\\Proyectos personales\\\\App Plataforma integral psicólogo\\\\App Anti Gravity plataforma integral\\\\index.html\")",
+      "mcp__b91a967e-9c2d-4a5d-a59f-8c3074158a54__netlify-project-services-reader"
     ]
   }
 }
