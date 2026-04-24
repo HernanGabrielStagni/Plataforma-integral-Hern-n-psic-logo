@@ -3904,7 +3904,7 @@
                     <span
                       style={{
                         fontFamily: "var(--mono)",
-                        fontSize: "7px",
+                        fontSize: "10px",
                         color: "rgba(255,255,255,.3)",
                         textTransform: "uppercase",
                         letterSpacing: ".05em",
@@ -3916,7 +3916,7 @@
                     </span>
                   </div>
                   {(dailyTotals || []).map((t, i) => {
-                    const nada = t.os === 0 && t.cobrado === 0 && t.pendiente === 0;
+                    const nada = t.ordenes === 0 && t.efectivo === 0 && t.transferencia === 0 && t.pendiente === 0;
                     return (
                       <div
                         key={i}
@@ -3932,27 +3932,32 @@
                           flexDirection: "column",
                           alignItems: "flex-start",
                           gap: "2px",
-                          minHeight: "38px",
+                          minHeight: "44px",
                           justifyContent: "center",
                         }}
                       >
                         {nada ? (
-                          <span style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "var(--tx3)", width: "100%", textAlign: "center" }}>—</span>
+                          <span style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--tx3)", width: "100%", textAlign: "center" }}>—</span>
                         ) : (
                           <>
-                            {t.os > 0 && (
-                              <span title="OS emitidas — sesiones con obra social" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "var(--tx2)", whiteSpace: "nowrap", cursor: "help" }}>
-                                <span style={{ color: "var(--tx3)" }}>📋 </span>${t.os.toLocaleString("es-AR")}
+                            {t.ordenes > 0 && (
+                              <span title="Órdenes OS emitidas" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "var(--tx2)", whiteSpace: "nowrap", cursor: "help" }}>
+                                📋 ${t.ordenes.toLocaleString("es-AR")}
                               </span>
                             )}
-                            {t.cobrado > 0 && (
-                              <span title="Cobrado en efectivo o transferencia" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "#2D6A3F", whiteSpace: "nowrap", cursor: "help" }}>
-                                <span style={{ color: "var(--tx3)" }}>💵 </span>${t.cobrado.toLocaleString("es-AR")}
+                            {t.efectivo > 0 && (
+                              <span title="Cobrado en efectivo" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#2D6A3F", whiteSpace: "nowrap", cursor: "help" }}>
+                                💵 ${t.efectivo.toLocaleString("es-AR")}
+                              </span>
+                            )}
+                            {t.transferencia > 0 && (
+                              <span title="Cobrado por transferencia" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#1A5276", whiteSpace: "nowrap", cursor: "help" }}>
+                                📱 ${t.transferencia.toLocaleString("es-AR")}
                               </span>
                             )}
                             {t.pendiente > 0 && (
-                              <span title="Pendiente de cobro (particular o coseguro sin abonar)" style={{ fontFamily: "var(--mono)", fontSize: "9px", color: "#C8922A", whiteSpace: "nowrap", cursor: "help" }}>
-                                <span style={{ color: "var(--tx3)" }}>⏳ </span>${t.pendiente.toLocaleString("es-AR")}
+                              <span title="Pendiente de cobro" style={{ fontFamily: "var(--mono)", fontSize: "12px", color: "#C8922A", whiteSpace: "nowrap", cursor: "help" }}>
+                                ⏳ ${t.pendiente.toLocaleString("es-AR")}
                               </span>
                             )}
                           </>
@@ -5046,7 +5051,7 @@
                 )}
 
                 {/* ─── 3. FORMA DE COBRO ─── */}
-                {f.tipo !== "AT" && (
+                {(f.tipo !== "AT" || f.estado === "cancelo" || f.estado === "inasistencia") && (
                   <div className="acc-row">
                     <div
                       className="acc-head"
@@ -5096,174 +5101,158 @@
                             </div>
 
                             {f.cobroCancel && (
-                              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 
-                                {/* ── BLOQUE A: Coseguro (solo si tiene OS) ── */}
-                                {pacienteConOS && (
-                                  <div style={{
-                                    background: "rgba(255,255,255,.04)",
-                                    border: `1px solid ${f.cancelCoseguro ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
-                                    borderRadius: "12px",
-                                    padding: "10px 12px",
-                                  }}>
-                                    <div
-                                      className={`cobro-chk-row ${f.cancelCoseguro ? "chk-activo" : ""}`}
-                                      style={{ marginBottom: f.cancelCoseguro ? "10px" : 0 }}
-                                      onClick={() => upd("cancelCoseguro", !f.cancelCoseguro)}
-                                    >
-                                      <div className={`cobro-chk-box ${f.cancelCoseguro ? "on" : ""}`}>
-                                        {f.cancelCoseguro ? "✓" : ""}
-                                      </div>
-                                      <span className={`cobro-chk-label ${f.cancelCoseguro ? "on" : ""}`}>
-                                        💵 Cobro coseguro
-                                      </span>
-                                    </div>
-                                    {f.cancelCoseguro && (
-                                      <>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
-                                          <div>
-                                            <div className="modal-label">Monto $</div>
-                                            <input
-                                              className="modal-input"
-                                              type="number"
-                                              style={{ fontFamily: "var(--mono)", marginBottom: 0 }}
-                                              placeholder="0"
-                                              value={f.cancelCoseguroMonto ?? ""}
-                                              onChange={(e) => upd("cancelCoseguroMonto", e.target.value)}
-                                            />
-                                          </div>
-                                          <div>
-                                            <div className="modal-label">Método</div>
-                                            <select
-                                              className="modal-select"
-                                              style={{ marginBottom: 0 }}
-                                              value={f.cancelCoseguroMetodo || "efectivo"}
-                                              onChange={(e) => upd("cancelCoseguroMetodo", e.target.value)}
-                                            >
-                                              <option value="efectivo">💵 Efectivo</option>
-                                              <option value="transferencia">📱 Transferencia</option>
-                                            </select>
-                                          </div>
-                                        </div>
-                                        <div
-                                          className={`cobro-chk-row ${f.cancelCoseguroPagado ? "chk-activo" : ""}`}
-                                          onClick={() => upd("cancelCoseguroPagado", !f.cancelCoseguroPagado)}
-                                        >
-                                          <div className={`cobro-chk-box ${f.cancelCoseguroPagado ? "on" : ""}`}>
-                                            {f.cancelCoseguroPagado ? "✓" : ""}
-                                          </div>
-                                          <span className={`cobro-chk-label ${f.cancelCoseguroPagado ? "on" : ""}`}>
-                                            {f.cancelCoseguroPagado ? "✅ Abonado" : "⏳ Pendiente"}
-                                          </span>
-                                          {f.cancelCoseguroPagado && f.cancelCoseguroMonto > 0 && (
-                                            <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: "12px", color: "var(--do)" }}>
-                                              ${Number(f.cancelCoseguroMonto).toLocaleString("es-AR")}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* ── BLOQUE B: Orden OS (solo si tiene OS) ── */}
-                                {pacienteConOS && (
-                                  <div style={{
-                                    background: "rgba(255,255,255,.04)",
-                                    border: `1px solid ${f.cancelOrdenOS ? "rgba(200,146,42,.5)" : "rgba(255,255,255,.1)"}`,
-                                    borderRadius: "12px",
-                                    padding: "10px 12px",
-                                  }}>
-                                    <div
-                                      className={`cobro-chk-row ${f.cancelOrdenOS ? "chk-activo" : ""}`}
-                                      style={{ marginBottom: f.cancelOrdenOS ? "10px" : 0 }}
-                                      onClick={() => upd("cancelOrdenOS", !f.cancelOrdenOS)}
-                                    >
-                                      <div className={`cobro-chk-box ${f.cancelOrdenOS ? "on" : ""}`}>
-                                        {f.cancelOrdenOS ? "✓" : ""}
-                                      </div>
-                                      <span className={`cobro-chk-label ${f.cancelOrdenOS ? "on" : ""}`}>
-                                        🏥 Orden Obra Social
-                                      </span>
-                                    </div>
-                                    {f.cancelOrdenOS && (
+                                {/* ── FILA COSEGURO (solo con OS) ── */}
+                                {pacienteConOS && (() => {
+                                  const activo = f.cancelCoseguro;
+                                  return (
+                                    <div style={{
+                                      display: "flex", alignItems: "center", gap: "8px",
+                                      padding: "8px 12px", borderRadius: "12px",
+                                      background: "rgba(255,255,255,.05)",
+                                      border: `1.5px solid ${activo ? "var(--do)" : "rgba(200,146,42,.2)"}`,
+                                      opacity: activo ? 1 : 0.55,
+                                      transition: "all .15s",
+                                    }}>
+                                      {/* Check izq: ¿se cobra? */}
                                       <div
-                                        className={`cobro-chk-row ${f.cancelOrdenEmitida ? "chk-activo" : ""}`}
-                                        onClick={() => upd("cancelOrdenEmitida", !f.cancelOrdenEmitida)}
+                                        className={`cobro-chk-box ${activo ? "on" : ""}`}
+                                        style={{ cursor: "pointer", flexShrink: 0 }}
+                                        onClick={() => upd("cancelCoseguro", !activo)}
                                       >
-                                        <div className={`cobro-chk-box ${f.cancelOrdenEmitida ? "on" : ""}`}>
-                                          {f.cancelOrdenEmitida ? "✓" : ""}
-                                        </div>
-                                        <span className={`cobro-chk-label ${f.cancelOrdenEmitida ? "on" : ""}`}>
-                                          {f.cancelOrdenEmitida ? "✅ Orden emitida" : "⏳ Pendiente de emitir"}
+                                        {activo ? "✓" : ""}
+                                      </div>
+                                      {/* Centro */}
+                                      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                        <span style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "rgba(255,255,255,.85)", whiteSpace: "nowrap" }}>
+                                          💵 Coseguro
+                                        </span>
+                                        <input
+                                          type="number"
+                                          className="modal-input"
+                                          style={{ width: "80px", marginBottom: 0, fontFamily: "var(--mono)", fontSize: "12px", padding: "4px 8px" }}
+                                          placeholder="0"
+                                          value={f.cancelCoseguroMonto ?? ""}
+                                          onChange={(e) => upd("cancelCoseguroMonto", e.target.value)}
+                                          disabled={!activo}
+                                        />
+                                        <select
+                                          className="modal-select"
+                                          style={{ width: "110px", marginBottom: 0, fontSize: "11px", padding: "4px 8px" }}
+                                          value={f.cancelCoseguroMetodo || "efectivo"}
+                                          onChange={(e) => upd("cancelCoseguroMetodo", e.target.value)}
+                                          disabled={!activo}
+                                        >
+                                          <option value="efectivo">💵 Efectivo</option>
+                                          <option value="transferencia">📱 Transfer.</option>
+                                        </select>
+                                      </div>
+                                      {/* Check der: ¿cobrado? */}
+                                      <div
+                                        className={`cobro-chk-box ${f.cancelCoseguroPagado ? "on" : ""}`}
+                                        style={{ cursor: activo ? "pointer" : "default", flexShrink: 0 }}
+                                        onClick={() => activo && upd("cancelCoseguroPagado", !f.cancelCoseguroPagado)}
+                                      >
+                                        {f.cancelCoseguroPagado ? "✓" : ""}
+                                      </div>
+                                      <span style={{ fontFamily: "var(--mono)", fontSize: "10px", color: f.cancelCoseguroPagado ? "var(--do)" : "rgba(255,255,255,.4)", whiteSpace: "nowrap" }}>
+                                        {f.cancelCoseguroPagado ? "✅" : "⏳"}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* ── FILA ORDEN OS (solo con OS) ── */}
+                                {pacienteConOS && (() => {
+                                  const activo = f.cancelOrdenOS;
+                                  return (
+                                    <div style={{
+                                      display: "flex", alignItems: "center", gap: "8px",
+                                      padding: "8px 12px", borderRadius: "12px",
+                                      background: "rgba(255,255,255,.05)",
+                                      border: `1.5px solid ${activo ? "var(--do)" : "rgba(200,146,42,.2)"}`,
+                                      opacity: activo ? 1 : 0.55,
+                                      transition: "all .15s",
+                                    }}>
+                                      {/* Check izq */}
+                                      <div
+                                        className={`cobro-chk-box ${activo ? "on" : ""}`}
+                                        style={{ cursor: "pointer", flexShrink: 0 }}
+                                        onClick={() => upd("cancelOrdenOS", !activo)}
+                                      >
+                                        {activo ? "✓" : ""}
+                                      </div>
+                                      {/* Centro */}
+                                      <div style={{ flex: 1 }}>
+                                        <span style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "rgba(255,255,255,.85)" }}>
+                                          🏥 Orden Obra Social
                                         </span>
                                       </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* ── BLOQUE C: Particular (solo si NO tiene OS) ── */}
-                                {!pacienteConOS && (
-                                  <div style={{
-                                    background: "rgba(255,255,255,.04)",
-                                    border: "1px solid rgba(200,146,42,.35)",
-                                    borderRadius: "12px",
-                                    padding: "10px 12px",
-                                  }}>
-                                    <div className="modal-label" style={{ marginBottom: "6px" }}>
-                                      💵 Cobro particular
+                                      {/* Check der: ¿emitida? */}
+                                      <div
+                                        className={`cobro-chk-box ${f.cancelOrdenEmitida ? "on" : ""}`}
+                                        style={{ cursor: activo ? "pointer" : "default", flexShrink: 0 }}
+                                        onClick={() => activo && upd("cancelOrdenEmitida", !f.cancelOrdenEmitida)}
+                                      >
+                                        {f.cancelOrdenEmitida ? "✓" : ""}
+                                      </div>
+                                      <span style={{ fontFamily: "var(--mono)", fontSize: "10px", color: f.cancelOrdenEmitida ? "var(--do)" : "rgba(255,255,255,.4)", whiteSpace: "nowrap" }}>
+                                        {f.cancelOrdenEmitida ? "✅" : "⏳"}
+                                      </span>
                                     </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
-                                      <div>
-                                        <div className="modal-label">Monto $</div>
+                                  );
+                                })()}
+
+                                {/* ── FILA PARTICULAR (solo sin OS) ── */}
+                                {!pacienteConOS && (() => {
+                                  const monto = Number(f.cancelParticularMonto) || 0;
+                                  const sinCobro = monto === 0;
+                                  return (
+                                    <div style={{
+                                      display: "flex", alignItems: "center", gap: "8px",
+                                      padding: "8px 12px", borderRadius: "12px",
+                                      background: "rgba(255,255,255,.05)",
+                                      border: "1.5px solid rgba(200,146,42,.35)",
+                                      transition: "all .15s",
+                                    }}>
+                                      {/* Centro */}
+                                      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                        <span style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "rgba(255,255,255,.85)", whiteSpace: "nowrap" }}>
+                                          💵 Cobro
+                                        </span>
                                         <input
-                                          className="modal-input"
                                           type="number"
-                                          style={{ fontFamily: "var(--mono)", marginBottom: 0 }}
+                                          className="modal-input"
+                                          style={{ width: "80px", marginBottom: 0, fontFamily: "var(--mono)", fontSize: "12px", padding: "4px 8px" }}
                                           placeholder="0"
                                           value={f.cancelParticularMonto ?? ""}
                                           onChange={(e) => upd("cancelParticularMonto", e.target.value)}
                                         />
-                                      </div>
-                                      <div>
-                                        <div className="modal-label">Método</div>
                                         <select
                                           className="modal-select"
-                                          style={{ marginBottom: 0 }}
+                                          style={{ width: "110px", marginBottom: 0, fontSize: "11px", padding: "4px 8px" }}
                                           value={f.cancelParticularMetodo || "efectivo"}
                                           onChange={(e) => upd("cancelParticularMetodo", e.target.value)}
                                         >
                                           <option value="efectivo">💵 Efectivo</option>
-                                          <option value="transferencia">📱 Transferencia</option>
+                                          <option value="transferencia">📱 Transfer.</option>
                                         </select>
                                       </div>
-                                    </div>
-                                    <div
-                                      className={`cobro-chk-row ${f.cancelParticularAbonado ? "chk-activo" : ""}`}
-                                      onClick={() => {
-                                        if (!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0) return;
-                                        upd("cancelParticularAbonado", !f.cancelParticularAbonado);
-                                      }}
-                                      style={{ opacity: (!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0) ? 0.4 : 1 }}
-                                    >
-                                      <div className={`cobro-chk-box ${f.cancelParticularAbonado ? "on" : ""}`}>
+                                      {/* Check der: ¿cobrado? */}
+                                      <div
+                                        className={`cobro-chk-box ${f.cancelParticularAbonado ? "on" : ""}`}
+                                        style={{ cursor: sinCobro ? "default" : "pointer", flexShrink: 0, opacity: sinCobro ? 0.35 : 1 }}
+                                        onClick={() => !sinCobro && upd("cancelParticularAbonado", !f.cancelParticularAbonado)}
+                                      >
                                         {f.cancelParticularAbonado ? "✓" : ""}
                                       </div>
-                                      <span className={`cobro-chk-label ${f.cancelParticularAbonado ? "on" : ""}`}>
-                                        {(!f.cancelParticularMonto || Number(f.cancelParticularMonto) === 0)
-                                          ? "Sin cobro ($ 0)"
-                                          : f.cancelParticularAbonado
-                                          ? "✅ Abonado"
-                                          : "⏳ Pendiente"}
+                                      <span style={{ fontFamily: "var(--mono)", fontSize: "10px", color: sinCobro ? "rgba(255,255,255,.25)" : f.cancelParticularAbonado ? "var(--do)" : "rgba(255,255,255,.4)", whiteSpace: "nowrap" }}>
+                                        {sinCobro ? "$ 0" : f.cancelParticularAbonado ? "✅" : "⏳"}
                                       </span>
-                                      {f.cancelParticularAbonado && f.cancelParticularMonto > 0 && (
-                                        <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: "12px", color: "var(--do)" }}>
-                                          ${Number(f.cancelParticularMonto).toLocaleString("es-AR")}
-                                        </span>
-                                      )}
                                     </div>
-                                  </div>
-                                )}
+                                  );
+                                })()}
 
                               </div>
                             )}
@@ -6622,26 +6611,52 @@
         const dailyTotals = visibleDatesForGrid.map((d) => {
           const ds = dateStr(d);
           const daySes = sesiones.filter(
-            (s) =>
-              s.fecha === ds &&
-              s.tipo !== "reserva_personal" &&
-              s.tipo !== "AT" &&
-              s.estado === "asistio",
+            (s) => s.fecha === ds && s.tipo !== "reserva_personal" && s.tipo !== "AT",
           );
-          let os = 0, cobrado = 0, pendiente = 0;
+          let efectivo = 0, transferencia = 0, ordenes = 0, pendiente = 0;
+          const addCobro = (monto, metodo, pagado) => {
+            if (!monto || monto <= 0) return;
+            if (!pagado) { pendiente += monto; return; }
+            if (metodo === "transferencia") transferencia += monto;
+            else efectivo += monto;
+          };
           daySes.forEach((s) => {
             const pac = pacientes.find((p) => p.id === s.pacienteId);
-            const tieneOS = pac?.obraSocial && pac.obraSocial !== "" && pac.obraSocial.toLowerCase() !== "ninguna";
-            if (tieneOS) {
-              os += valorOrdenDe(s);
-            } else if (s.cobrado) {
-              cobrado += valorParticularDe(s);
-              // TODO: discriminar efectivo/transferencia cuando exista s.metodoPago
-            } else {
-              pendiente += valorParticularDe(s);
+            const tieneOS = !!(pac?.obraSocial && pac.obraSocial !== "" && pac.obraSocial.toLowerCase() !== "ninguna");
+            const coseguroMonto = tieneOS ? (pac?.coseguro || 0) : 0;
+
+            if (s.estado === "asistio") {
+              if (tieneOS) {
+                const ord = valorOrdenDe(s);
+                if (ord > 0) ordenes += ord;
+                if (coseguroMonto > 0) addCobro(coseguroMonto, s.metodoPago, s.cobrado);
+              } else {
+                const monto = valorParticularDe(s);
+                addCobro(monto, s.metodoPago, s.cobrado);
+              }
+            } else if (s.cobroCancel) {
+              if (tieneOS) {
+                // V2: coseguro de cancelación
+                if (s.cancelCoseguro && (s.cancelCoseguroMonto || 0) > 0) {
+                  addCobro(s.cancelCoseguroMonto, s.cancelCoseguroMetodo, s.cancelCoseguroPagado);
+                }
+                // V2: orden OS en cancelación
+                if (s.cancelOrdenOS && s.cancelOrdenEmitida) {
+                  const ord = valorOrdenDe(s);
+                  if (ord > 0) ordenes += ord;
+                }
+              } else {
+                // V2: particular cancelación
+                if ((s.cancelParticularMonto || 0) > 0) {
+                  addCobro(s.cancelParticularMonto, s.cancelParticularMetodo, s.cancelParticularAbonado);
+                } else if ((s.montoCancel || 0) > 0) {
+                  // V1 legado
+                  addCobro(s.montoCancel, "efectivo", s.cancelAbonado);
+                }
+              }
             }
           });
-          return { os, cobrado, pendiente };
+          return { efectivo, transferencia, ordenes, pendiente };
         });
 
         const pendSem = weekSes.filter(
@@ -10980,78 +10995,133 @@
               )}
 
               {/* SESIONES */}
-              {tab === "sesiones" && (
-                <div>
-                  <div className="stats-grid">
-                    <StatCard label="Total sesiones" value={totalSesiones} />
-                    <StatCard label="Asistidas" value={asistidas} />
-                    <StatCard label="Canceladas" value={canceladas} />
-                    <StatCard label="Pendientes" value={pendientes} />
-                  </div>
-                  <div className="tbl-wrap">
-                    <table className="tbl">
-                      <thead>
-                        <tr>
-                          <th>Fecha</th>
-                          <th>Horario</th>
-                          <th>Tipo</th>
-                          <th>Estado</th>
-                          <th>Cobrado</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sesiones.length === 0 && (
+              {tab === "sesiones" && (() => {
+                /* ── Helpers de columna ── */
+                const DIAS_ABREV = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
+                function cobroCell(s) {
+                  if (s.estado === "asistio") {
+                    if (s.modalidadPago === "particular") {
+                      const m = Number(s.montoParticular) || 0;
+                      return m > 0 ? `$${m.toLocaleString("es-AR")}` : "—";
+                    }
+                    if (s.modalidadPago === "obra_social") {
+                      const m = Number(s.coseguroMonto) || 0;
+                      return m > 0 ? `$${m.toLocaleString("es-AR")}` : "OS";
+                    }
+                    const m = Number(s.montoCobrado) || 0;
+                    return m > 0 ? `$${m.toLocaleString("es-AR")}` : "—";
+                  }
+                  if ((s.estado === "cancelo" || s.estado === "inasistencia" || s.estado === "reprogramo") && s.cobroCancel) {
+                    if (s.cancelCoseguro !== undefined || s.cancelParticularMonto !== undefined) {
+                      const parts = [];
+                      if (s.cancelCoseguro) parts.push(`$${(Number(s.cancelCoseguroMonto) || 0).toLocaleString("es-AR")}`);
+                      if (s.cancelOrdenOS) parts.push("Ord");
+                      const mP = Number(s.cancelParticularMonto) || 0;
+                      if (mP > 0 && !s.cancelCoseguro) parts.push(`$${mP.toLocaleString("es-AR")}`);
+                      return parts.join("+") || "—";
+                    }
+                    const m = Number(s.montoCancel) || 0;
+                    return m > 0 ? `$${m.toLocaleString("es-AR")}` : "—";
+                  }
+                  return "—";
+                }
+                function pendienteCell(s) {
+                  if (s.estado === "asistio") {
+                    if (s.modalidadPago === "particular" && !s.particularAbonado) return "⏳";
+                    if (s.modalidadPago === "obra_social" && (!s.coseguroAbonado || !s.ordenEmitida || !s.ordenFirmada)) return "⏳";
+                    if (s.modalidadPago == null && s.cobrado === false) return "⏳";
+                    return "✅";
+                  }
+                  if ((s.estado === "cancelo" || s.estado === "inasistencia" || s.estado === "reprogramo") && s.cobroCancel) {
+                    if (s.cancelCoseguro !== undefined || s.cancelParticularMonto !== undefined) {
+                      if (s.cancelCoseguro && !s.cancelCoseguroPagado) return "⏳";
+                      if (s.cancelOrdenOS && !s.cancelOrdenEmitida) return "⏳";
+                      if ((Number(s.cancelParticularMonto) || 0) > 0 && !s.cancelParticularAbonado) return "⏳";
+                      return "✅";
+                    }
+                    if (s.cancelEfectivo && !s.cancelAbonado) return "⏳";
+                    if (s.cancelOrden && !s.cancelOrdenSaldada) return "⏳";
+                    return "✅";
+                  }
+                  return "—";
+                }
+                const tasaAsistencia = (asistidas + canceladas) > 0
+                  ? Math.round((asistidas / (asistidas + canceladas)) * 100) + "%"
+                  : "—";
+
+                return (
+                  <div>
+                    <div className="stats-grid">
+                      <StatCard label="Total sesiones" value={totalSesiones} />
+                      <StatCard label="Asistidas" value={asistidas} />
+                      <StatCard label="Canceladas" value={canceladas} />
+                      <StatCard label="Pendientes" value={pendientes} />
+                      <StatCard label="Asistencia" value={tasaAsistencia} />
+                    </div>
+                    <div className="tbl-wrap">
+                      <table className="tbl">
+                        <thead>
                           <tr>
-                            <td
-                              colSpan={5}
-                              style={{
-                                textAlign: "center",
-                                color: "var(--tx3)",
-                                padding: "20px",
-                              }}
-                            >
-                              Sin sesiones registradas
-                            </td>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Cobro</th>
+                            <th style={{ textAlign: "center" }}>¿Pend?</th>
                           </tr>
-                        )}
-                        {sesiones.map((s) => (
-                          <tr key={s.id}>
-                            <td style={{ fontFamily: "var(--mono)" }}>
-                              {s.fecha}
-                            </td>
-                            <td style={{ fontFamily: "var(--mono)" }}>
-                              {s.horaInicio} - {s.horaFin}
-                            </td>
-                            <td>{s.tipo}</td>
-                            <td>
-                              <Badge
-                                type={
-                                  s.estado === "asistio"
-                                    ? "ok"
-                                    : s.estado === "cancelo" || s.estado === "inasistencia"
-                                      ? "error"
-                                      : "warn"
-                                }
+                        </thead>
+                        <tbody>
+                          {sesiones.length === 0 && (
+                            <tr>
+                              <td colSpan={4} style={{ textAlign: "center", color: "var(--tx3)", padding: "20px" }}>
+                                Sin sesiones registradas
+                              </td>
+                            </tr>
+                          )}
+                          {sesiones.map((s) => {
+                            const pend = pendienteCell(s);
+                            const fechaObj = s.fecha ? new Date(s.fecha + "T12:00") : null;
+                            const diaAbrev = fechaObj ? DIAS_ABREV[fechaObj.getDay()] : "";
+                            const fechaFmt = fechaObj
+                              ? `${String(fechaObj.getDate()).padStart(2, "0")}/${String(fechaObj.getMonth() + 1).padStart(2, "0")}`
+                              : s.fecha;
+                            return (
+                              <tr
+                                key={s.id}
+                                style={{ background: pend === "⏳" ? "rgba(200,146,42,.06)" : undefined }}
                               >
-                                {ESTADO_ICONS[s.estado] || "⏳"} {s.estado}
-                              </Badge>
-                            </td>
-                            <td>
-                              {s.cobrado ? (
-                                <span style={{ fontFamily: "var(--mono)" }}>
-                                  ${s.montoCobrado?.toLocaleString("es-AR")}
-                                </span>
-                              ) : (
-                                <span style={{ color: "var(--tx3)" }}>—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                                <td style={{ fontFamily: "var(--mono)", fontSize: "11px", whiteSpace: "nowrap" }}>
+                                  {fechaFmt}
+                                  {diaAbrev && (
+                                    <span style={{ color: "var(--tx3)", marginLeft: "5px" }}>{diaAbrev}</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <Badge
+                                    type={
+                                      s.estado === "asistio"
+                                        ? "ok"
+                                        : s.estado === "cancelo" || s.estado === "inasistencia"
+                                          ? "error"
+                                          : "warn"
+                                    }
+                                  >
+                                    {ESTADO_ICONS[s.estado] || "⏳"}
+                                  </Badge>
+                                </td>
+                                <td style={{ fontFamily: "var(--mono)", fontSize: "11px" }}>
+                                  {cobroCell(s)}
+                                </td>
+                                <td style={{ textAlign: "center", fontSize: "13px" }}>
+                                  {pend}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* COBROS */}
               {tab === "cobros" && (
